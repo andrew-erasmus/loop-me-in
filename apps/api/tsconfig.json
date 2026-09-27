@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Duplicated from ../../tsconfig.base.json rather than relied on purely
+    // through `extends`: Vercel's isolated function build (Root Directory =
+    // apps/api) doesn't reliably resolve an `extends` path that reaches
+    // outside this directory, and silently falling back to TypeScript's
+    // non-strict defaults there produced real, different type errors from
+    // Drizzle's insert/update helpers than what `tsc --build` at the repo
+    // root sees. Keep these two files in step by hand.
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src", "api", "drizzle.config.ts"]
+}

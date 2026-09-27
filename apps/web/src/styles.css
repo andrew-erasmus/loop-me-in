@@ -1,0 +1,88 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Inter for reading, Bricolage Grotesque for anything that should carry
+     weight — dates, list names, dialog titles. The fallbacks matter: the
+     display face is fetched over the network, and `display=swap` means the
+     stack below is what you actually see for the first few hundred ms. */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* The neutral scale, hue-shifted into green.
+
+     This replaces zinc everywhere rather than sitting beside it. A green button
+     on a grey app reads as an accent bolted on; a green cast running through
+     every surface, hairline and label is what makes it the app's own colour.
+     Saturation stays low at the light end so the two people's avatar colours
+     and the category palette are still the loudest hues on screen.
+
+     Lightness tracks zinc step for step, so every contrast pairing the app
+     already relied on still holds. Mirrored in `apps/mobile/src/theme.ts` —
+     one design, two renderers, so a value changed here changes there too. */
+  --color-moss-50: #f6f8f4;
+  --color-moss-100: #edf1ea;
+  --color-moss-200: #dce3d8;
+  --color-moss-300: #c2cdbc;
+  --color-moss-400: #94a38d;
+  --color-moss-500: #6e7d68;
+  --color-moss-600: #52604d;
+  --color-moss-700: #3f4b3b;
+  --color-moss-800: #2b3428;
+  --color-moss-900: #1b211a;
+  --color-moss-950: #0f130e;
+
+  /* Primary actions — buttons, the sign-in mark, selected chips, today. */
+  --color-primary: #33502e;
+  --color-primary-pressed: #25391f;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  /* dvh accounts for mobile browser chrome collapsing on scroll — without it
+     a fixed bottom tab bar jumps as the address bar shows/hides. Falls back
+     to the line above on browsers that don't support dvh. */
+  height: 100dvh;
+}
+
+body {
+  /* The page itself carries the tint. A white app with green buttons reads as
+     a template someone recoloured; starting from moss-50 means the colour is
+     the material rather than a coat of paint on top of it. */
+  @apply bg-moss-50 text-moss-950 antialiased;
+}
+
+/* Headings opt into the display face explicitly rather than it being global —
+   Bricolage at small sizes in body copy is noisy. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Thin scrollbars inside the time grid, so the gutter doesn't jump. */
+.scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: theme(--color-moss-300) transparent;
+}
+
+/* The moment a vote makes an item unanimous — a quick pulse on the vote chip. */
+@keyframes match-pulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  65% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-match {
+  animation: match-pulse 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

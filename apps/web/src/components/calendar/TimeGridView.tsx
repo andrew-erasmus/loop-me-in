@@ -1,0 +1,448 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  eventColor,
+  eventsOnDay,
+  format,
+  fractionOfDay,
+  getHourSlots,
+  isSameDay,
+  layoutDayEvents,
+  type CalendarDay,
+  type CalendarEvent,
+  type Category,
+  type EventTimes,
+} from '@date-calendar/core';
+import { useEventDrag, type DragState } from '../../hooks/useEventDrag.js';
+import { chipListEmoji, chipStatusIcon, chipTooltip, type EventDecoration } from '../../lib/decorations.js';
+import Icon from '../ui/Icon.js';
+
+/** Pixel height of one hour row. The only place fractions become pixels. */
+const HOUR_HEIGHT = 48;
+const DAY_HEIGHT = HOUR_HEIGHT * 24;
+
+interface TimeGridViewProps {
+  days: CalendarDay[];
+  today: Date;
+  events: CalendarEvent[];
+  categories: Map<string, Category>;
+  decorations: Map<string, EventDecoration>;
+  onSelectEvent: (event: CalendarEvent) => void;
+  onSelectSlot: (start: Date) => void;
+  onMoveEvent: (eventId: string, times: EventTimes) => void;
+}
+
+/**
+ * The hour-by-hour grid behind both the Week and the Day view — they differ
+ * only in how many day columns they render.
+ *
+ * Event geometry comes from `layoutDayEvents` in the shared core as fractions
+ * of a day; this component multiplies those by HOUR_HEIGHT. The mobile app will
+ * multiply the same fractions by a measured height instead.
+ */
+export default function TimeGridView({
+  days,
+  today,
+  events,
+  categories,
+  decorations,
+  onSelectEvent,
+  onSelectSlot,
+  onMoveEvent,
+}: TimeGridViewProps) {
+  const hours = useMemo(() => getHourSlots(), []);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const hasScrolled = useRef(false);
+  const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Open on the working day rather than at midnight, but only once — later
+  // renders must not yank the user back up the grid.
+  useEffect(() => {
+    if (hasScrolled.current || !scrollRef.current) return;
+    scrollRef.current.scrollTop = 7.5 * HOUR_HEIGHT;
+    hasScrolled.current = true;
+  }, []);
+
+  const getColumnRects = useCallback(
+    () =>
+      columnRefs.current
+        .filter((node): node is HTMLDivElement => node !== null)
+        .map((node) => node.getBoundingClientRect()),
+    [],
+  );
+
+  const { drag, begin, consumeClickSuppression } = useEventDrag({
+    dayHeightPx: DAY_HEIGHT,
+    getColumnRects,
+    onCommit: onMoveEvent,
+  });
+
+  const allDayByDay = useMemo(
+    () =>
+      days.map((day) => ({
+        day,
+        events: eventsOnDay(events, day.date).filter((event) => event.allDay),
+      })),
+    [days, events],
+  );
+
+  const hasAllDayRow = allDayByDay.some((entry) => entry.events.length > 0);
+  const showsToday = days.some((day) => isSameDay(day.date, today));
+
+  /**
+   * While a drag is in flight the dragged event is re-timed in place, so every
+   * column re-lays-out around it and the preview lands exactly where the drop
+   * will put it — no separate ghost element that could disagree with reality.
+   */
+  const previewEvents = useMemo(() => {
+    if (!drag) return events;
+    return events.map((event) =>
+      event.id === drag.eventId ? { ...event, ...drag.preview } : event,
+    );
+  }, [events, drag]);
+
+  return (
+    <div
+      className={`flex h-full min-h-0 flex-col bg-white ${
+        drag ? 'cursor-grabbing select-none' : ''
+      }`}
+    >
+      {/* Day headings */}
+      <div className="flex border-b border-moss-200">
+        <div className="w-14 shrink-0 border-r border-moss-200" />
+        {days.map((day, index) => (
+          <div
+            key={day.key}
+            className={`flex-1 border-r border-moss-200/70 px-2 pt-2 pb-2.5 text-center transition-colors last:border-r-0 ${
+              drag?.dayIndex === index
+                ? 'bg-moss-100'
+                : day.isWeekend
+                  ? 'bg-moss-50/80'
+                  : ''
+            }`}
+          >
+            <div
+              className={`text-[10px] font-bold tracking-[0.12em] uppercase ${
+                day.isToday ? 'text-moss-950' : 'text-moss-400'
+              }`}
+            >
+              {format(day.date, 'EEE')}
+            </div>
+            <div
+              className={`display mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-base ${
+                day.isToday ? 'bg-primary text-white' : 'text-moss-800'
+              }`}
+            >
+              {day.dayOfMonth}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* All-day band, only rendered when something is in it */}
+      {hasAllDayRow && (
+        <div className="flex border-b border-moss-200 bg-moss-50/60">
+          <div className="flex w-14 shrink-0 items-center justify-end border-r border-moss-200 pr-2 text-[11px] font-medium text-moss-400">
+            All day
+          </div>
+          {allDayByDay.map(({ day, events: allDayEvents }) => (
+            <div
+              key={day.key}
+              className="flex flex-1 flex-col gap-0.5 border-r border-moss-200 p-1 last:border-r-0"
+            >
+              {allDayEvents.map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onSelectEvent(event)}
+                  title={`${event.title}${chipTooltip(decorations.get(event.id))}`}
+                  className="flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white"
+                  style={{
+                    backgroundColor: eventColor(event, categories),
+                    ...(decorations.get(event.id)?.personColor
+                      ? {
+                          boxShadow: `inset 2px 0 0 0 ${decorations.get(event.id)!.personColor}`,
+                        }
+                      : {}),
+                  }}
+                >
+                  {chipStatusIcon(decorations.get(event.id)) && (
+                    <Icon icon={chipStatusIcon(decorations.get(event.id))!} size="xs" className="shrink-0 text-white" />
+                  )}
+                  {chipListEmoji(decorations.get(event.id)) && (
+                    <span aria-hidden>{chipListEmoji(decorations.get(event.id))}</span>
+                  )}
+                  <span className="truncate">{event.title}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Scrolling hour grid */}
+      <div ref={scrollRef} className="scroll-slim min-h-0 flex-1 overflow-y-auto">
+        <div className="flex" style={{ height: DAY_HEIGHT }}>
+          {/* Hour gutter */}
+          <div className="w-14 shrink-0 border-r border-moss-200">
+            {hours.map((slot) => (
+              <div
+                key={slot.hour}
+                style={{ height: HOUR_HEIGHT }}
+                className="relative border-b border-moss-100"
+              >
+                <span className="absolute -top-2 right-2 text-[10px] font-medium tabular-nums text-moss-400">
+                  {slot.hour === 0 ? '' : slot.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {days.map((day, index) => (
+            <DayColumn
+              key={day.key}
+              ref={(node) => {
+                columnRefs.current[index] = node;
+              }}
+              day={day}
+              dayIndex={index}
+              today={today}
+              showsToday={showsToday}
+              events={previewEvents}
+              categories={categories}
+              decorations={decorations}
+              hours={hours}
+              drag={drag}
+              onBeginDrag={begin}
+              onSelectEvent={onSelectEvent}
+              onSelectSlot={onSelectSlot}
+              consumeClickSuppression={consumeClickSuppression}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DayColumn({
+  ref,
+  day,
+  dayIndex,
+  today,
+  showsToday,
+  events,
+  categories,
+  decorations,
+  hours,
+  drag,
+  onBeginDrag,
+  onSelectEvent,
+  onSelectSlot,
+  consumeClickSuppression,
+}: {
+  ref: (node: HTMLDivElement | null) => void;
+  day: CalendarDay;
+  dayIndex: number;
+  today: Date;
+  showsToday: boolean;
+  events: CalendarEvent[];
+  categories: Map<string, Category>;
+  decorations: Map<string, EventDecoration>;
+  hours: { hour: number; label: string }[];
+  drag: DragState | null;
+  onBeginDrag: (args: {
+    event: CalendarEvent;
+    mode: 'move' | 'resize';
+    pointerEvent: React.PointerEvent;
+    dayIndex: number;
+  }) => void;
+  onSelectEvent: (event: CalendarEvent) => void;
+  onSelectSlot: (start: Date) => void;
+  consumeClickSuppression: () => boolean;
+}) {
+  const positioned = useMemo(
+    () => layoutDayEvents(eventsOnDay(events, day.date), day.date),
+    [events, day.date],
+  );
+
+  const isToday = showsToday && isSameDay(day.date, today);
+
+  /**
+   * How much of this column is already behind us: all of it for a day that has
+   * been and gone, the part above "now" for today, none of it for the future.
+   *
+   * Drawn as one veil rather than by restyling each hour cell — it has to stop
+   * partway down the current hour, which a per-cell background cannot do.
+   */
+  const spentFraction = isToday
+    ? fractionOfDay(today)
+    : day.date < today && !isSameDay(day.date, today)
+      ? 1
+      : 0;
+
+  return (
+    <div
+      ref={ref}
+      className={`relative flex-1 border-r border-moss-200/70 transition-colors last:border-r-0 ${
+        drag?.dayIndex === dayIndex
+          ? 'bg-moss-100/60'
+          : day.isWeekend
+            ? 'bg-moss-50/70'
+            : ''
+      }`}
+    >
+      {spentFraction > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 z-0 bg-moss-100/50"
+          style={{ height: spentFraction * DAY_HEIGHT }}
+        />
+      )}
+      {/* Clickable half-hour slots behind the events */}
+      {hours.map((slot) => (
+        <div key={slot.hour} style={{ height: HOUR_HEIGHT }} className="border-b border-moss-100/80">
+          {[0, 30].map((minute) => (
+            <div
+              key={minute}
+              onClick={() => {
+                // A drag that ended over empty space must not also create an event.
+                if (consumeClickSuppression()) return;
+                const start = new Date(day.date);
+                start.setHours(slot.hour, minute, 0, 0);
+                onSelectSlot(start);
+              }}
+              style={{ height: HOUR_HEIGHT / 2 }}
+              className="cursor-pointer transition hover:bg-moss-100/70"
+            />
+          ))}
+        </div>
+      ))}
+
+      {isToday && <CurrentTimeIndicator today={today} />}
+
+      {positioned.map((item) => {
+        const color = eventColor(item.event, categories);
+        const decoration = decorations.get(item.event.id);
+        const widthPercent = 100 / item.columnCount;
+        const isDragging = drag?.eventId === item.event.id;
+
+        return (
+          <div
+            key={item.event.id}
+            // Stable handle for tests and for hit-testing, so neither depends
+            // on the element's tag or styling.
+            data-event-id={item.event.id}
+            onPointerDown={(pointerEvent) => {
+              // Someone else's surprise is visible but immovable.
+              if (decoration?.canEdit === false) return;
+              onBeginDrag({
+                event: item.event,
+                mode: 'move',
+                pointerEvent,
+                dayIndex,
+              });
+            }}
+            onClick={() => {
+              if (consumeClickSuppression()) return;
+              onSelectEvent(item.event);
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(keyEvent) => {
+              if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+                keyEvent.preventDefault();
+                onSelectEvent(item.event);
+              }
+            }}
+            title={`${format(new Date(item.event.startsAt), 'HH:mm')}–${format(
+              new Date(item.event.endsAt),
+              'HH:mm',
+            )}  ${item.event.title}${chipTooltip(decoration)}`}
+            className={`group absolute touch-none overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] leading-tight shadow-sm transition-shadow ${
+              decoration?.canEdit === false
+                ? 'cursor-pointer hover:z-10 hover:shadow-md'
+                : isDragging
+                  ? 'z-30 cursor-grabbing opacity-90 shadow-lg ring-2 ring-moss-900'
+                  : 'cursor-grab hover:z-10 hover:shadow-md'
+            }`}
+            style={{
+              // Fractions from the shared core, turned into pixels/percentages here.
+              top: item.top * DAY_HEIGHT,
+              height: Math.max(item.height * DAY_HEIGHT - 2, 14),
+              left: `calc(${item.column * widthPercent}% + 2px)`,
+              width: `calc(${widthPercent}% - 4px)`,
+              borderLeftColor: color,
+              backgroundColor: `${color}1f`,
+              // The left border is already the category's; the owner goes on
+              // the trailing edge so the two never compete for the same strip.
+              ...(decoration?.personColor
+                ? { boxShadow: `inset -3px 0 0 0 ${decoration.personColor}` }
+                : {}),
+              // A clipped event shouldn't look like it starts/ends at midnight.
+              borderTopLeftRadius: item.continuesFromPreviousDay ? 0 : undefined,
+              borderTopRightRadius: item.continuesFromPreviousDay ? 0 : undefined,
+              borderBottomLeftRadius: item.continuesIntoNextDay ? 0 : undefined,
+              borderBottomRightRadius: item.continuesIntoNextDay ? 0 : undefined,
+            }}
+          >
+            <div className="flex items-center gap-1 truncate font-semibold text-moss-800">
+              {chipStatusIcon(decoration) && (
+                <Icon icon={chipStatusIcon(decoration)!} size="xs" className="shrink-0" />
+              )}
+              {chipListEmoji(decoration) && <span aria-hidden>{chipListEmoji(decoration)}</span>}
+              <span className="truncate">{item.event.title}</span>
+            </div>
+            {item.height * DAY_HEIGHT > 30 && (
+              <div className="truncate tabular-nums text-moss-500">
+                {format(new Date(item.event.startsAt), 'HH:mm')} –{' '}
+                {format(new Date(item.event.endsAt), 'HH:mm')}
+              </div>
+            )}
+
+            {/* Bottom edge: drag to change the end time. Hidden on events too
+                short to show it without covering the title, and on someone
+                else's surprise, which must not be resized either. */}
+            {decoration?.canEdit !== false &&
+              !item.continuesIntoNextDay &&
+              item.height * DAY_HEIGHT > 24 && (
+              <div
+                onPointerDown={(pointerEvent) => {
+                  // Don't let the move handler on the parent also fire.
+                  pointerEvent.stopPropagation();
+                  onBeginDrag({
+                    event: item.event,
+                    mode: 'resize',
+                    pointerEvent,
+                    dayIndex,
+                  });
+                }}
+                onClick={(clickEvent) => clickEvent.stopPropagation()}
+                role="presentation"
+                // Hover can't reveal this on touch, so it's always visible
+                // below `md` and hover-gated above it, where a mouse can find it.
+                className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+              >
+                <div className="mx-auto h-0.5 w-6 rounded-full bg-moss-400/70" />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The red "now" line. Re-renders itself every minute. */
+function CurrentTimeIndicator({ today }: { today: Date }) {
+  const top = fractionOfDay(today) * DAY_HEIGHT;
+  return (
+    <div
+      className="pointer-events-none absolute right-0 left-0 z-20 flex items-center"
+      style={{ top }}
+      aria-hidden
+    >
+      <div className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+      <div className="h-px flex-1 bg-red-500" />
+    </div>
+  );
+}

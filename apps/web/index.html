@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- `interactive-widget=resizes-content` makes the on-screen keyboard
+         actually shrink the viewport instead of just floating over the
+         bottom of it — without it, `100dvh` sheets and `position: fixed`
+         elements (the bottom tab bar, a form sheet's Save button) don't know
+         the keyboard is there and end up either hidden behind it or stuck
+         wherever the layout viewport happened to be before it opened. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- PWA install + iOS home-screen chrome. vite-plugin-pwa injects the
+         manifest link and service-worker registration at build time. -->
+    <meta name="theme-color" content="#33502e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Loop Me In" />
+
+    <!-- Bricolage Grotesque for headings, Inter for everything else.
+         preconnect because the CSS and the font files come from two different
+         hosts — without it the browser discovers fonts.gstatic.com only after
+         the stylesheet has parsed, costing a round trip on first paint. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400..600&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>Loop Me In</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+node_modules/
+dist/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+.DS_Store
+*.local
+
+# Secrets: OAuth credentials and the session key.
+# Real .env files never get committed; the *.example templates always do.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Expo
+.expo/
+.vercel
+.env*

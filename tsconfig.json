@@ -1,0 +1,11 @@
+{
+  // Solution file: `tsc --build` at the root checks all three packages.
+  // Empty `files` because this config compiles nothing itself — it exists
+  // purely to point at the projects that do.
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./apps/api" },
+    { "path": "./apps/web" }
+  ]
+}
