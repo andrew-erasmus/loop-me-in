@@ -3,7 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.js';
 import AuthGate from './components/auth/AuthGate.js';
+import { trackViewportHeight } from './lib/viewport.js';
 import './styles.css';
+
+// Before the first render, so the shell is the right height from the first
+// paint rather than resizing a frame later.
+trackViewportHeight();
 
 const queryClient = new QueryClient({
   defaultOptions: {
