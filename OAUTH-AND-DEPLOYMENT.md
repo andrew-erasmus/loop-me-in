@@ -338,11 +338,9 @@ local `file:./calendar.db` — nothing about local work touches Turso or Vercel.
 
 ### Using it from a phone
 
-It's a web app, so it just works in mobile Safari/Chrome. Both of you can "Add to Home Screen" and
-it behaves close enough to an app for daily use. The README's `Adding the mobile app` section
-covers the real React Native route if you ever want it — note that native sign-in uses
-`expo-auth-session` rather than this browser redirect, though everything behind the session table
-stays as it is.
+It's a web app, so it just works in mobile Safari/Chrome — and the phone layout is the one it was
+designed around, not a shrunken desktop. Both of you can "Add to Home Screen", which gives it its
+own icon, no browser chrome, and this same Google sign-in.
 
 ---
 

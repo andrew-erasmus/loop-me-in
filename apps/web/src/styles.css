@@ -17,8 +17,7 @@
      and the category palette are still the loudest hues on screen.
 
      Lightness tracks zinc step for step, so every contrast pairing the app
-     already relied on still holds. Mirrored in `apps/mobile/src/theme.ts` —
-     one design, two renderers, so a value changed here changes there too. */
+     already relied on still holds. */
   --color-moss-50: #f6f8f4;
   --color-moss-100: #edf1ea;
   --color-moss-200: #dce3d8;

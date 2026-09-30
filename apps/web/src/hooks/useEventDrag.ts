@@ -15,8 +15,8 @@ import {
  * pointer events, deciding when a press becomes a drag, and working out which
  * day column the pointer is over. The moment it has "N days sideways, M minutes
  * vertically" it hands off to @date-calendar/core, which does the actual date
- * arithmetic. React Native will replace this file with a PanResponder and reuse
- * the same core functions untouched.
+ * arithmetic — so the meaning of the gesture lives in the core, and only its
+ * measurement lives here.
  */
 
 /** Pointer travel before a press counts as a drag rather than a click. */

@@ -143,7 +143,7 @@ export default function ListsView({
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       {/* Rail — desktop only. Below `md` this becomes the chip strip further
-          down, RN's own trade for the same "no room for a sidebar" reason. */}
+          down, for the same "no room for a sidebar" reason. */}
       <nav
         aria-label="Lists"
         className="hidden w-60 shrink-0 flex-col gap-1 overflow-y-auto border-r border-moss-200/80 bg-moss-50/70 p-3 md:flex"
@@ -191,8 +191,8 @@ export default function ListsView({
         </button>
       </nav>
 
-      {/* Chip strip — phone width only. RN's horizontal strip of lists above
-          the items, since there's no room for a sidebar. */}
+      {/* Chip strip — phone width only. A horizontal strip of lists above the
+          items, since there's no room for a sidebar. */}
       <div
         aria-label="Lists"
         className="flex shrink-0 gap-2 overflow-x-auto border-b border-moss-200/80 bg-white px-4 py-3 md:hidden"

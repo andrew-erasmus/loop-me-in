@@ -8,8 +8,8 @@ import type { CalendarEvent } from './types.js';
  * Positions are returned as **fractions, not pixels**. `top`/`height` are
  * fractions of the full day (0 = midnight, 1 = next midnight) and
  * `column`/`columnCount` describe the horizontal split. The web app multiplies
- * these by a pixel height; React Native multiplies them by a measured height.
- * Same maths, different units — which is what makes this file portable.
+ * these by a pixel height; keeping the maths in fractions is what keeps this
+ * file free of units, and testable without a layout to measure.
  */
 
 const MINUTES_PER_DAY = 24 * 60;

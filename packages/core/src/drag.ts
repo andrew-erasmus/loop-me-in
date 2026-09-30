@@ -7,8 +7,8 @@ import type { CalendarEvent } from './types.js';
  *
  * Deliberately free of pointer events, DOM nodes and pixels: a gesture is
  * reduced to "how many days sideways, how many minutes up or down" before it
- * reaches this file. Web measures that from a PointerEvent, React Native will
- * measure it from a PanResponder, and both then call the same functions here.
+ * reaches this file. The web measures that from a PointerEvent and then calls
+ * the functions here, which know nothing about how it was measured.
  *
  * All arithmetic is in local time — dragging an event one column to the right
  * means "same wall-clock time, next day", which is what the user sees, and

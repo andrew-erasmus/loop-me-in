@@ -3,8 +3,8 @@
  * elements expect, which are always local-time and have no timezone suffix.
  *
  * This is the one genuinely web-specific piece of date handling, which is why
- * it lives here rather than in @date-calendar/core — React Native uses a native
- * picker that works with `Date` objects directly.
+ * it lives here rather than in @date-calendar/core: it exists to satisfy
+ * `<input>`, not to describe a date.
  */
 
 function pad(value: number): string {

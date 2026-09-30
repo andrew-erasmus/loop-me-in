@@ -23,11 +23,10 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 API_PORT=${PORT:-3031}
 WEB_PORT=${WEB_PORT:-5173}
-METRO_PORT=${METRO_PORT:-8082}
 
 # Supervisors before workers. Anything that can restart a child is listed first.
-SUPERVISORS='concurrently -n api,web|tsx watch|/\.bin/vite|expo/bin/cli|expo start'
-WORKERS='src/server\.ts|/\.bin/vite|expo/bin/cli'
+SUPERVISORS='concurrently -n api,web|tsx watch|/\.bin/vite'
+WORKERS='src/server\.ts|/\.bin/vite'
 
 # PIDs in this checkout matching a pattern, excluding this script and its parent
 # (both have $ROOT in their own command lines).
@@ -72,7 +71,7 @@ fi
 # tool you care about than a leftover of ours, and we have already killed
 # everything that is provably ours.
 blocked=0
-for port in "$API_PORT" "$WEB_PORT" "$METRO_PORT"; do
+for port in "$API_PORT" "$WEB_PORT"; do
   holder=$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null | head -1 || true)
   if [ -n "$holder" ]; then
     blocked=1
@@ -83,5 +82,5 @@ for port in "$API_PORT" "$WEB_PORT" "$METRO_PORT"; do
   fi
 done
 
-[ "$blocked" -eq 0 ] && echo "Ports $API_PORT, $WEB_PORT and $METRO_PORT are free."
+[ "$blocked" -eq 0 ] && echo "Ports $API_PORT and $WEB_PORT are free."
 exit 0

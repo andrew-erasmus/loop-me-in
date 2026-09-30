@@ -73,10 +73,9 @@ import { roundToNextSlot } from './lib/datetime.js';
 
 export default function App() {
   // Tapping a day cell means two different things by width: desktop opens a
-  // new event there (RN has no equivalent — a mouse can aim at empty space
-  // precisely); mobile jumps to Day view for that date, same as RN's
-  // `MonthScreen` — a phone's day cells are too small a target to aim a new
-  // event at reliably.
+  // new event there, since a mouse can aim at empty space precisely; the phone
+  // jumps to Day view for that date instead, because its day cells are too
+  // small a target to aim a new event at reliably.
   const isMobile = useIsMobile();
 
   const [view, setView] = useState<CalendarView>('month');
@@ -105,10 +104,10 @@ export default function App() {
     view === 'lists' ? 'lists' : view === 'memories' ? 'memories' : 'calendar';
 
   // Which dated sub-view to return to when tapping back onto the Calendar tab
-  // from Lists or Memories — mirrors RN's own `useState` default of 'agenda'
-  // for the same reason: it's the most useful "what's next" view. Typed as any
-  // dated view, not just the ones the phone bar offers, so a `week` carried
-  // over from desktop width survives a trip through Lists.
+  // from Lists or Memories. Defaults to agenda — it's the most useful
+  // "what's next" view. Typed as any dated view, not just the ones the phone
+  // bar offers, so a `week` carried over from desktop width survives a trip
+  // through Lists.
   const [lastCalendarView, setLastCalendarView] = useState<DatedView>('agenda');
   useEffect(() => {
     if (isDatedView(view)) setLastCalendarView(view);

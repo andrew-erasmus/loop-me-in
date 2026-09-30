@@ -2,9 +2,8 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import Icon from '../ui/Icon.js';
 
 /**
- * The phone-width "new event" control — a floating circular button, same
- * placement as RN's FAB in `CalendarScreen`. Desktop keeps its "New event"
- * button in `CalendarHeader` instead.
+ * The phone-width "new event" control — a floating circular button above the
+ * tab bar. Desktop keeps its "New event" button in `CalendarHeader` instead.
  */
 export default function NewEventFab({ onPress }: { onPress: () => void }) {
   return (

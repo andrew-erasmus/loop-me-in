@@ -15,9 +15,8 @@ const TABS: { tab: MobileTab; label: string; icon: IconDefinition }[] = [
 ];
 
 /**
- * The phone-width bottom tab bar — Calendar / Lists / Memories, same three
- * destinations and same icons as RN's `Shell`. Desktop keeps them as three of
- * the six buttons in `CalendarHeader`'s view switcher instead.
+ * The phone-width bottom tab bar — Calendar / Lists / Memories. Desktop keeps
+ * them as three of the buttons in `CalendarHeader`'s view switcher instead.
  */
 export default function MobileTabBar({
   active,

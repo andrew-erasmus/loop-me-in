@@ -3,8 +3,9 @@
  * bare package specifier.
  *
  * `@date-calendar/core` ships raw TypeScript with no build step — Vite and
- * `tsx` both transpile it directly, which is deliberate (see
- * `apps/mobile/metro.config.js`'s own long comment on the same trade-off).
+ * `tsx` both transpile it directly, which is deliberate: it keeps the shared
+ * package editable without a watch task standing between a change and the app
+ * that uses it.
  * Vercel's serverless bundler resolves a *bare* import of it through plain
  * node_modules `exports`, lands on that unbuilt `.ts` entry point, and has no
  * loader for it at runtime — the deployed function crashes on

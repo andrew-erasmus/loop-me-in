@@ -43,8 +43,8 @@ interface TimeGridViewProps {
  * only in how many day columns they render.
  *
  * Event geometry comes from `layoutDayEvents` in the shared core as fractions
- * of a day; this component multiplies those by HOUR_HEIGHT. The mobile app will
- * multiply the same fractions by a measured height instead.
+ * of a day; this component multiplies those by HOUR_HEIGHT. Keeping the maths
+ * in fractions is what keeps the layout code free of pixels.
  */
 export default function TimeGridView({
   days,

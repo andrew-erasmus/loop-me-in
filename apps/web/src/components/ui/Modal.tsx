@@ -14,14 +14,14 @@ interface ModalProps {
  * Shared dialog shell: backdrop, Escape-to-close, and a scroll lock.
  *
  * Below `sm` this becomes a bottom sheet — anchored to the bottom edge,
- * full-width, sliding up on entry — matching the RN app's `Sheet.tsx`. Above
- * `sm` it's the same centred dialog it always was. Keeping the chrome in one
+ * full-width, sliding up on entry. Above `sm` it's the same centred dialog it
+ * always was. Keeping the chrome in one
  * component means only this file changes, not every form inside it.
  */
 export default function Modal({ title, onClose, children, size = 'sm' }: ModalProps) {
-  // Slides in on mount rather than being visible from frame one — mirrors the
-  // RN sheet's entrance. Starts closed so the transition actually has
-  // something to animate from.
+  // Slides in on mount rather than being visible from frame one, the way a
+  // native sheet does. Starts closed so the transition actually has something
+  // to animate from.
   const [entered, setEntered] = useState(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setEntered(true));

@@ -7,11 +7,11 @@ import SpaceSwitcher from './SpaceSwitcher.js';
 /**
  * The phone-width header: which calendar you are in, and the people in it.
  *
- * Mirrors the RN app's `Shell` header — Categories and Sign out live in the
- * space sheet instead of up here, the same trade RN already made by not having
- * a header control for them at all. The name is a switcher rather than a
- * label, because for anyone in more than one space it's the fastest question
- * the header can answer: *am I looking at the right calendar?*
+ * Categories and Sign out live in the space sheet rather than up here: a phone
+ * header has room for the calendar's name and the people in it, and not much
+ * else. The name is a switcher rather than a label, because for anyone in more
+ * than one space it's the fastest question the header can answer: *am I
+ * looking at the right calendar?*
  */
 export default function MobileHeader({
   me,

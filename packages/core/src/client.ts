@@ -30,9 +30,9 @@ import {
 /**
  * Typed API client built on `fetch`.
  *
- * `fetch` is global in browsers and in React Native, so this file moves to the
- * mobile app unchanged — only `baseUrl` differs (a relative path behind Vite's
- * dev proxy on web, an absolute LAN or production URL on device).
+ * Built on the global `fetch`, so it carries no transport dependency of its
+ * own — only `baseUrl` varies (a relative path behind Vite's dev proxy in
+ * development, an absolute URL against the deployed API).
  */
 
 export class ApiError extends Error {
@@ -70,9 +70,8 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
     const response = await doFetch(`${baseUrl}${path}`, {
       ...init,
       // The session lives in an HttpOnly cookie. Same-origin behind Vite's
-      // proxy this is already the default, but the mobile app and any deployed
-      // split-origin setup send nothing without it — cheap now, silent 401s
-      // later.
+      // proxy this is already the default, but any deployed split-origin setup
+      // sends nothing without it — cheap now, silent 401s later.
       credentials: 'include',
       headers: {
         ...(init.body ? { 'content-type': 'application/json' } : {}),
