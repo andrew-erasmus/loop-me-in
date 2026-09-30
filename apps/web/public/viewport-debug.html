@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Identical to the app's, so this page sits in the same viewport the app
+         does and reproduces the band if the band is the app's to reproduce. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Viewport debug</title>
+    <style>
+      /* Deliberately garish: each layer is a colour you can name in a
+         screenshot, so whatever is painting the strip under the bar identifies
+         itself rather than having to be inferred. */
+      html {
+        background: #ff00ff; /* MAGENTA — the canvas, outside <body> */
+        height: 100dvh;
+      }
+      body {
+        background: #00b0ff; /* BLUE — the body box */
+        height: 100dvh;
+        margin: 0;
+        font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #0f130e;
+      }
+      #shell {
+        background: #ffd400; /* YELLOW — the app shell */
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      main {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: calc(0.75rem + env(safe-area-inset-top)) 12px 12px;
+      }
+      /* The app's tab bar, reproduced: white, safe-area padding, last child. */
+      nav {
+        flex-shrink: 0;
+        background: #fff;
+        border-top: 1px solid #dce3d8;
+        padding-top: 10px;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+        text-align: center;
+        font-weight: 700;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        background: #fff;
+        border-radius: 8px;
+      }
+      td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #edf1ea;
+        vertical-align: top;
+      }
+      td:first-child {
+        color: #6e7d68;
+        white-space: nowrap;
+      }
+      td:last-child {
+        font-weight: 700;
+        text-align: right;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 8px 0 0;
+        color: #3f4b3b;
+      }
+      /* Probes: elements sized purely by the safe-area insets, so their
+         measured height IS the inset value the browser is applying. */
+      .probe-bottom {
+        height: env(safe-area-inset-bottom);
+      }
+      .probe-top {
+        height: env(safe-area-inset-top);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="probe-bottom" id="probe-bottom"></div>
+    <div class="probe-top" id="probe-top"></div>
+
+    <div id="shell">
+      <main>
+        <h1>Viewport debug</h1>
+        <table id="readout"></table>
+        <p>
+          Screenshot this whole screen — including the strip below the white
+          bar, if there is one. Its colour names the culprit: magenta = the
+          canvas, blue = body, yellow = the shell, anything else = outside the
+          page entirely (the iOS app window).
+        </p>
+      </main>
+      <nav>tab bar (white)</nav>
+    </div>
+
+    <script>
+      const rows = [];
+      const add = (label, value) => rows.push([label, String(value)]);
+
+      const viewport = window.visualViewport;
+      const probe = (id) =>
+        Math.round(document.getElementById(id).getBoundingClientRect().height);
+
+      add('standalone (iOS)', navigator.standalone === undefined ? 'n/a' : navigator.standalone);
+      add('display-mode', window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser');
+      add('screen.height', screen.height);
+      add('innerHeight', window.innerHeight);
+      add('visualViewport.h', viewport ? Math.round(viewport.height) : 'n/a');
+      add('documentElement.clientH', document.documentElement.clientHeight);
+      add('body offsetHeight', document.body.offsetHeight);
+      add('shell offsetHeight', document.getElementById('shell').offsetHeight);
+      add('safe-area top', probe('probe-top') + 'px');
+      add('safe-area bottom', probe('probe-bottom') + 'px');
+      add('devicePixelRatio', window.devicePixelRatio);
+      add('serviceWorker', 'serviceWorker' in navigator ? (navigator.serviceWorker.controller ? 'controlling' : 'none active') : 'unsupported');
+
+      document.getElementById('readout').innerHTML = rows
+        .map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`)
+        .join('');
+
+      // Re-measure as the toolbar collapses, so the numbers match the screenshot.
+      const refresh = () => location.reload();
+      if (viewport) viewport.addEventListener('resize', () => {}, { passive: true });
+      void refresh;
+    </script>
+  </body>
+</html>

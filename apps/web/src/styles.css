@@ -68,25 +68,26 @@ html {
   background-color: white;
 }
 
-/* Installed on the home screen there is no browser chrome to collapse, so the
-   layout viewport is stable and pinning the shell to it is both safe and
-   exact — `inset: 0` reaches the real bottom edge even where `100dvh` doesn't.
-   This is deliberately scoped to standalone: in Safari proper, `fixed`
-   resolves against the large layout viewport and would put the tab bar behind
-   the toolbar, which is the trap the bar's own comment warns about. */
-@media (display-mode: standalone) {
-  #root {
-    position: fixed;
-    inset: 0;
-    height: auto;
-  }
+/* The app's moss tint lives on the shell, not on `body`.
+
+   This is the whole trick for the band under the tab bar. `body` and `#root`
+   are not always the same height — a `fixed` shell resolves against the layout
+   viewport while `body` follows the visual one, and iOS does not always agree
+   about those two — so whenever `#root` comes up short, whatever `body` is
+   painted with shows through beneath the bar. Keeping every layer *behind* the
+   app white means that strip is white, which is continuous with the white tab
+   bar above it. `#root` wraps the entire app, so putting the tint here leaves
+   every screen looking exactly as it did. */
+#root {
+  background-color: var(--color-moss-50);
 }
 
 body {
-  /* The page itself carries the tint. A white app with green buttons reads as
-     a template someone recoloured; starting from moss-50 means the colour is
-     the material rather than a coat of paint on top of it. */
-  @apply bg-moss-50 text-moss-950 antialiased;
+  /* White, with the moss moved up to `#root` — see the note there. The tint is
+     still the app's material rather than a coat of paint on top of it; it just
+     starts at the shell instead of the page, so nothing behind the shell can
+     show through as a coloured band. */
+  @apply bg-white text-moss-950 antialiased;
 
   /* Deliberately NOT `overflow: hidden` / `overscroll-behavior: none`.
      Locking the document down does stop the rubber-band, but it also tells
