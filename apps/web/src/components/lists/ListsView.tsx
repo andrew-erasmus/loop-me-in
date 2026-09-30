@@ -234,7 +234,7 @@ export default function ListsView({
       </div>
 
       {/* Items */}
-      <section className="min-w-0 flex-1 overflow-y-auto">
+      <section className="min-w-0 flex-1 overflow-y-auto overscroll-contain">
         {selected && (
           <>
             <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-moss-200/80 bg-white/90 px-6 py-4 backdrop-blur">

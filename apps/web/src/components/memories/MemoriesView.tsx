@@ -33,7 +33,7 @@ export default function MemoriesView({ items, lists, onSelectItem }: MemoriesVie
   }
 
   return (
-    <div className="mx-auto h-full max-w-2xl overflow-y-auto px-6 py-8">
+    <div className="mx-auto h-full max-w-2xl overflow-y-auto overscroll-contain px-6 py-8">
       {groups.map((group) => (
         <section key={group.key} className="mb-8">
           <h2 className="display mb-3 text-lg text-moss-950">{group.label}</h2>

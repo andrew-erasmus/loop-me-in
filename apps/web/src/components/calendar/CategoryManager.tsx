@@ -43,7 +43,7 @@ export default function CategoryManager({ categories, onClose }: CategoryManager
 
   return (
     <Modal title="Categories" onClose={onClose} size="md">
-      <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+      <div className="max-h-[60vh] overflow-y-auto overscroll-contain px-5 py-4">
         <ul className="space-y-1">
           {categories.map((category) => (
             <CategoryRow

@@ -2,13 +2,16 @@ import { faArrowsRotate, faChevronDown } from '@fortawesome/free-solid-svg-icons
 import type { Me } from '@date-calendar/core';
 import Avatar from '../ui/Avatar.js';
 import Icon from '../ui/Icon.js';
+import SpaceSwitcher from './SpaceSwitcher.js';
 
 /**
- * The phone-width header: space name and the people in it, nothing else.
+ * The phone-width header: which calendar you are in, and the people in it.
  *
- * Mirrors the RN app's `Shell` header exactly — Categories and Sign out live
- * in the space sheet instead of up here, the same trade RN already made by
- * not having a header control for them at all.
+ * Mirrors the RN app's `Shell` header — Categories and Sign out live in the
+ * space sheet instead of up here, the same trade RN already made by not having
+ * a header control for them at all. The name is a switcher rather than a
+ * label, because for anyone in more than one space it's the fastest question
+ * the header can answer: *am I looking at the right calendar?*
  */
 export default function MobileHeader({
   me,
@@ -30,7 +33,7 @@ export default function MobileHeader({
       // of above them.
       className="flex items-center justify-between gap-2 border-b border-moss-200/80 bg-white px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:hidden"
     >
-      <h1 className="display min-w-0 flex-1 truncate text-xl text-moss-950">{me.space.name}</h1>
+      <SpaceSwitcher me={me} onManageSpace={onManageSpace} variant="title" />
 
       <button
         type="button"

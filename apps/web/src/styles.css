@@ -51,6 +51,21 @@ body {
      a template someone recoloured; starting from moss-50 means the colour is
      the material rather than a coat of paint on top of it. */
   @apply bg-moss-50 text-moss-950 antialiased;
+
+  /* The document itself never scrolls: the shell is exactly one viewport tall
+     and every scrollable region inside it is its own scroller. Without this,
+     overscrolling one of those inner scrollers chains up to the document and
+     rubber-bands the entire app — which drags the bottom tab bar up off the
+     bottom edge and shows the page behind it. `overflow: hidden` is the belt
+     to that brace: nothing can scroll the document even if some future child
+     does overflow, so the tab bar stays clamped where the flex column puts it.
+
+     Note this is deliberately not `position: fixed` on the bar itself. Fixed
+     resolves against the *layout* viewport, which on iOS is the large one —
+     the bar would sit behind the browser toolbar. Being the last child of a
+     `100dvh` flex column tracks the viewport that is actually on screen. */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Headings opt into the display face explicitly rather than it being global —
@@ -65,6 +80,9 @@ body {
 .scroll-slim {
   scrollbar-width: thin;
   scrollbar-color: theme(--color-moss-300) transparent;
+  /* Reaching the end of the month grid or the hour grid stops there rather
+     than handing the rest of the gesture to the document behind it. */
+  overscroll-behavior: contain;
 }
 
 /* The moment a vote makes an item unanimous — a quick pulse on the vote chip. */

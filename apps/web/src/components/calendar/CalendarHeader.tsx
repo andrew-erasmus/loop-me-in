@@ -11,6 +11,7 @@ import {
   faChevronLeft,
   faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
+import SpaceSwitcher from '../layout/SpaceSwitcher.js';
 import Avatar from '../ui/Avatar.js';
 import Icon from '../ui/Icon.js';
 
@@ -160,6 +161,11 @@ export default function CalendarHeader({
       )}
 
       <div className="flex items-center gap-2 border-l border-moss-200 pl-3">
+        {/* On a dated view the `h1` above is the period, so without this the
+            space's name appears nowhere — which is fine with one calendar and
+            genuinely confusing with several. */}
+        <SpaceSwitcher me={me} onManageSpace={onManageSpace} variant="chip" />
+
         <button
           type="button"
           onClick={onRefresh}

@@ -78,7 +78,7 @@ export default function Modal({ title, onClose, children, size = 'sm' }: ModalPr
             <Icon icon={faXmark} size="md" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
           {children}
         </div>
       </div>
