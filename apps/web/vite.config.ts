@@ -15,7 +15,19 @@ export default defineConfig({
         short_name: 'Loop Me In',
         description: 'A shared calendar and lists, just for the two of you.',
         theme_color: '#33502e',
-        background_color: '#f6f8f4',
+        // White, not the app's moss, and deliberately not `--color-moss-50`.
+        //
+        // iOS paints the app window with this colour and the web view sits on
+        // top of it. When the view doesn't reach the bottom edge of the screen,
+        // what shows through underneath the tab bar is this — and in moss it
+        // reads as a gap below the bar, because the bar is white. No stylesheet
+        // can reach that band: it is the window, not the page. White makes it
+        // continuous with the bar above it, the way a native tab bar runs into
+        // the home-indicator area.
+        //
+        // It is also the launch splash's background, which is the trade: the
+        // splash is now white rather than moss.
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
