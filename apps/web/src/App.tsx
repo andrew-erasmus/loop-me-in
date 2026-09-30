@@ -38,11 +38,15 @@ import MonthView from './components/calendar/MonthView.js';
 import SurpriseModal from './components/calendar/SurpriseModal.js';
 import TimeGridView from './components/calendar/TimeGridView.js';
 import MobileHeader from './components/layout/MobileHeader.js';
-import MobileCalendarBar from './components/layout/MobileCalendarBar.js';
+import MobileCalendarBar, {
+  MOBILE_VIEWS,
+  type MobileCalendarView,
+} from './components/layout/MobileCalendarBar.js';
 import NewEventFab from './components/layout/NewEventFab.js';
 import MobileTabBar, { type MobileTab } from './components/layout/MobileTabBar.js';
 import { membersById, useLogout, useMe } from './hooks/useAuth.js';
 import { useIsMobile } from './hooks/useIsMobile.js';
+import { useViewSwipe } from './hooks/useViewSwipe.js';
 import {
   useCategories,
   useCreateEvent,
@@ -370,6 +374,25 @@ export default function App() {
     [weekDays, anchorDate],
   );
 
+  // Swiping sideways across the calendar steps through the phone's view
+  // switcher, in the order the switcher itself lists them. It stops at both
+  // ends rather than wrapping: the segmented control above has a first and a
+  // last, and a gesture that silently jumps from one end to the other reads as
+  // having gone the wrong way.
+  const swipeViews = (direction: 1 | -1) => {
+    const index = MOBILE_VIEWS.indexOf(view as MobileCalendarView);
+    if (index === -1) return;
+    const next = MOBILE_VIEWS[index + direction];
+    if (next) setView(next);
+  };
+
+  const viewSwipe = useViewSwipe({
+    onSwipe: swipeViews,
+    // Only where there is a switcher to step through: the phone, on the
+    // calendar tab, on a view the switcher offers.
+    enabled: isMobile && mobileTab === 'calendar' && isDatedView(view),
+  });
+
   // AuthGate only renders this once there is a session, so `me` is present in
   // practice; this keeps TypeScript honest without an assertion.
   if (!me) return null;
@@ -428,7 +451,7 @@ export default function App() {
         />
       )}
 
-      <main className="min-h-0 flex-1">
+      <main className="min-h-0 flex-1" {...viewSwipe}>
         {view === 'lists' ? (
           <ListsView
             lists={lists}

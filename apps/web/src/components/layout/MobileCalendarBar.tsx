@@ -11,7 +11,9 @@ import Icon from '../ui/Icon.js';
  * time the rest of the week is one tap away rather than lost. Desktop keeps
  * the full week, where the width is there for it.
  */
-const MOBILE_VIEWS = ['month', '3day', 'day', 'agenda'] as const;
+/** Exported because swiping across the calendar steps through this same
+ *  order — the gesture and the control have to agree about what comes next. */
+export const MOBILE_VIEWS = ['month', '3day', 'day', 'agenda'] as const;
 export type MobileCalendarView = (typeof MOBILE_VIEWS)[number];
 
 const LABELS: Record<MobileCalendarView, string> = {
