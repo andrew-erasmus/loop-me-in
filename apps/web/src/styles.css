@@ -46,6 +46,38 @@ body,
   height: 100dvh;
 }
 
+/* The canvas — everything outside the body box — is the tab bar's white, not
+   the app's moss tint.
+
+   iOS does not always give a full-bleed viewport: depending on how the app was
+   launched and which iOS it is, `100dvh` can stop short of the physical bottom
+   and leave the home-indicator band painted by the canvas instead of by the
+   app. That band sits directly beneath a white tab bar, so in moss-50 it reads
+   as a gap and in white it reads as the bar running to the bottom edge, which
+   is what a native tab bar does anyway.
+
+   `html` having its own background is what makes this work: a background set
+   only on `body` propagates to the canvas, so the two cannot differ. Nothing
+   else changes — `body` is a full viewport tall and paints moss-50 over all of
+   it, so this colour is visible only where the viewport isn't. */
+html {
+  background-color: white;
+}
+
+/* Installed on the home screen there is no browser chrome to collapse, so the
+   layout viewport is stable and pinning the shell to it is both safe and
+   exact — `inset: 0` reaches the real bottom edge even where `100dvh` doesn't.
+   This is deliberately scoped to standalone: in Safari proper, `fixed`
+   resolves against the large layout viewport and would put the tab bar behind
+   the toolbar, which is the trap the bar's own comment warns about. */
+@media (display-mode: standalone) {
+  #root {
+    position: fixed;
+    inset: 0;
+    height: auto;
+  }
+}
+
 body {
   /* The page itself carries the tint. A white app with green buttons reads as
      a template someone recoloured; starting from moss-50 means the colour is
