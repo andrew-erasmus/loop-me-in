@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from 'react';
-import { faGift, faLock, faUsers, type IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import {
+  faGift,
+  faLock,
+  faPlus,
+  faUsers,
+  type IconDefinition,
+} from '@fortawesome/free-solid-svg-icons';
 import {
   ApiError,
+  CATEGORY_PALETTE,
   ORPHAN_EVENT_COLOR,
   eventInputSchema,
   type CalendarEvent,
@@ -17,6 +24,7 @@ import {
   toDateInput,
   toDateTimeInput,
 } from '../../lib/datetime.js';
+import { useCreateCategory } from '../../hooks/useCalendarData.js';
 import Avatar from '../ui/Avatar.js';
 import Icon from '../ui/Icon.js';
 import Modal from '../ui/Modal.js';
@@ -340,6 +348,12 @@ export default function EventModal({
             >
               None
             </button>
+
+            {/* The category you want is most often missing exactly here, while
+                you are describing the thing that needs it. Sending someone off
+                to the manager and back — three taps and a lost draft on a
+                phone — is how events end up uncategorised. */}
+            <InlineCategoryAdd onCreated={(created) => setCategoryId(created.id)} />
           </div>
         </div>
 
@@ -403,5 +417,122 @@ export default function EventModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/**
+ * Add a category from inside the event form, and select it.
+ *
+ * Collapsed to a single chip until asked for, so the common case — picking one
+ * that already exists — isn't sharing its row with a form. Renaming, recolouring
+ * and deleting still belong in `CategoryManager`; this is only the one step that
+ * is worth not leaving the page for.
+ */
+function InlineCategoryAdd({ onCreated }: { onCreated: (category: Category) => void }) {
+  const createCategory = useCreateCategory();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [color, setColor] = useState<string>(CATEGORY_PALETTE[0]);
+  const [error, setError] = useState<string | null>(null);
+
+  const close = () => {
+    setOpen(false);
+    setName('');
+    setError(null);
+  };
+
+  const submit = async () => {
+    const trimmed = name.trim();
+    if (trimmed === '' || createCategory.isPending) return;
+    setError(null);
+    try {
+      const created = await createCategory.mutateAsync({ name: trimmed, color });
+      onCreated(created);
+      close();
+    } catch {
+      setError('Could not create that category.');
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 rounded-full border border-dashed border-moss-300 px-2.5 py-1 text-xs font-medium text-moss-500 transition hover:border-primary hover:text-primary"
+      >
+        <Icon icon={faPlus} size="xs" />
+        New
+      </button>
+    );
+  }
+
+  return (
+    // `w-full` inside the chips' flex-wrap puts this on its own row rather than
+    // squeezing in beside them.
+    <div className="w-full rounded-lg bg-moss-50 p-2.5">
+      <div className="flex items-center gap-2">
+        <input
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- opened by an
+          // explicit tap, and the keyboard is the next thing wanted.
+          autoFocus
+          value={name}
+          onChange={(changeEvent) => setName(changeEvent.target.value)}
+          onKeyDown={(keyEvent) => {
+            // This sits inside the event form: a bare Enter would submit that
+            // and save a half-finished event.
+            if (keyEvent.key === 'Enter') {
+              keyEvent.preventDefault();
+              void submit();
+            }
+            if (keyEvent.key === 'Escape') {
+              keyEvent.preventDefault();
+              close();
+            }
+          }}
+          placeholder="Category name"
+          aria-label="New category name"
+          maxLength={40}
+          className="min-w-0 flex-1 rounded-md border border-moss-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          disabled={name.trim() === '' || createCategory.isPending}
+          className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-pressed disabled:opacity-40"
+        >
+          {createCategory.isPending ? 'Adding…' : 'Add'}
+        </button>
+        <button
+          type="button"
+          onClick={close}
+          className="rounded-md px-2 py-2 text-sm font-medium text-moss-500 transition hover:bg-moss-200"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {CATEGORY_PALETTE.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setColor(option)}
+            aria-label={`Use colour ${option}`}
+            aria-pressed={color === option}
+            className={`h-6 w-6 rounded-full transition ${
+              color === option ? 'ring-2 ring-primary ring-offset-2' : 'hover:scale-110'
+            }`}
+            style={{ backgroundColor: option }}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

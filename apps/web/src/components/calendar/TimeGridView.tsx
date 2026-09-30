@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  THREE_DAY_SPAN,
   eventColor,
   eventsOnDay,
   format,
@@ -29,10 +30,16 @@ interface TimeGridViewProps {
   onSelectEvent: (event: CalendarEvent) => void;
   onSelectSlot: (start: Date) => void;
   onMoveEvent: (eventId: string, times: EventTimes) => void;
+  /**
+   * Jump to a single day. Wired to the column headings in any multi-day span,
+   * where a phone-width column has less room than an event may need — the
+   * heading is the way out to the full-width Day view.
+   */
+  onShowDay?: (day: Date) => void;
 }
 
 /**
- * The hour-by-hour grid behind both the Week and the Day view — they differ
+ * The hour-by-hour grid behind the Week, 3-day and Day views — they differ
  * only in how many day columns they render.
  *
  * Event geometry comes from `layoutDayEvents` in the shared core as fractions
@@ -48,7 +55,18 @@ export default function TimeGridView({
   onSelectEvent,
   onSelectSlot,
   onMoveEvent,
+  onShowDay,
 }: TimeGridViewProps) {
+  // Week, 3 days and Day are the same grid with different column counts, and
+  // each wants something different from a narrow screen.
+  //
+  // Any multi-day span makes its headings a way through to the full-width Day
+  // view. Only a span wider than the phone's own `3day` has to give up the
+  // in-block times as well — at three columns they still fit, which is the
+  // whole reason the phone shows three rather than seven.
+  const isMultiDay = days.length > 1;
+  const isDense = days.length > THREE_DAY_SPAN;
+
   const hours = useMemo(() => getHourSlots(), []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
@@ -108,46 +126,63 @@ export default function TimeGridView({
     >
       {/* Day headings */}
       <div className="flex border-b border-moss-200">
-        <div className="w-14 shrink-0 border-r border-moss-200" />
-        {days.map((day, index) => (
-          <div
-            key={day.key}
-            className={`flex-1 border-r border-moss-200/70 px-2 pt-2 pb-2.5 text-center transition-colors last:border-r-0 ${
-              drag?.dayIndex === index
-                ? 'bg-moss-100'
-                : day.isWeekend
-                  ? 'bg-moss-50/80'
-                  : ''
-            }`}
-          >
-            <div
-              className={`text-[10px] font-bold tracking-[0.12em] uppercase ${
-                day.isToday ? 'text-moss-950' : 'text-moss-400'
-              }`}
+        <div className="w-11 shrink-0 border-r border-moss-200 md:w-14" />
+        {days.map((day, index) => {
+          const heading = (
+            <>
+              <div
+                className={`text-[10px] font-bold tracking-[0.1em] uppercase ${
+                  day.isToday ? 'text-moss-950' : 'text-moss-400'
+                }`}
+              >
+                {format(day.date, 'EEE')}
+              </div>
+              <div
+                className={`display mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-base ${
+                  day.isToday ? 'bg-primary text-white' : 'text-moss-800'
+                }`}
+              >
+                {day.dayOfMonth}
+              </div>
+            </>
+          );
+
+          const cellClasses = `min-w-0 flex-1 border-r border-moss-200/70 px-0.5 pt-2 pb-2.5 text-center transition-colors last:border-r-0 md:px-2 ${
+            drag?.dayIndex === index
+              ? 'bg-moss-100'
+              : day.isWeekend
+                ? 'bg-moss-50/80'
+                : ''
+          }`;
+
+          return isMultiDay && onShowDay ? (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => onShowDay(day.date)}
+              aria-label={`Show ${format(day.date, 'EEEE d MMMM')}`}
+              className={`${cellClasses} cursor-pointer hover:bg-moss-100/70`}
             >
-              {format(day.date, 'EEE')}
+              {heading}
+            </button>
+          ) : (
+            <div key={day.key} className={cellClasses}>
+              {heading}
             </div>
-            <div
-              className={`display mx-auto mt-1 flex h-8 w-8 items-center justify-center rounded-full text-base ${
-                day.isToday ? 'bg-primary text-white' : 'text-moss-800'
-              }`}
-            >
-              {day.dayOfMonth}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* All-day band, only rendered when something is in it */}
       {hasAllDayRow && (
         <div className="flex border-b border-moss-200 bg-moss-50/60">
-          <div className="flex w-14 shrink-0 items-center justify-end border-r border-moss-200 pr-2 text-[11px] font-medium text-moss-400">
+          <div className="flex w-11 shrink-0 items-center justify-end border-r border-moss-200 pr-1.5 text-[10px] font-medium text-moss-400 md:w-14 md:pr-2 md:text-[11px]">
             All day
           </div>
           {allDayByDay.map(({ day, events: allDayEvents }) => (
             <div
               key={day.key}
-              className="flex flex-1 flex-col gap-0.5 border-r border-moss-200 p-1 last:border-r-0"
+              className="flex min-w-0 flex-1 flex-col gap-0.5 border-r border-moss-200 p-1 last:border-r-0"
             >
               {allDayEvents.map((event) => (
                 <button
@@ -183,14 +218,14 @@ export default function TimeGridView({
       <div ref={scrollRef} className="scroll-slim min-h-0 flex-1 overflow-y-auto">
         <div className="flex" style={{ height: DAY_HEIGHT }}>
           {/* Hour gutter */}
-          <div className="w-14 shrink-0 border-r border-moss-200">
+          <div className="w-11 shrink-0 border-r border-moss-200 md:w-14">
             {hours.map((slot) => (
               <div
                 key={slot.hour}
                 style={{ height: HOUR_HEIGHT }}
                 className="relative border-b border-moss-100"
               >
-                <span className="absolute -top-2 right-2 text-[10px] font-medium tabular-nums text-moss-400">
+                <span className="absolute -top-2 right-1.5 text-[10px] font-medium tabular-nums text-moss-400 md:right-2">
                   {slot.hour === 0 ? '' : slot.label}
                 </span>
               </div>
@@ -207,6 +242,7 @@ export default function TimeGridView({
               dayIndex={index}
               today={today}
               showsToday={showsToday}
+              isDense={isDense}
               events={previewEvents}
               categories={categories}
               decorations={decorations}
@@ -230,6 +266,7 @@ function DayColumn({
   dayIndex,
   today,
   showsToday,
+  isDense,
   events,
   categories,
   decorations,
@@ -245,6 +282,8 @@ function DayColumn({
   dayIndex: number;
   today: Date;
   showsToday: boolean;
+  /** True in Week view: the column is a seventh of the width, not a third. */
+  isDense: boolean;
   events: CalendarEvent[];
   categories: Map<string, Category>;
   decorations: Map<string, EventDecoration>;
@@ -283,7 +322,7 @@ function DayColumn({
   return (
     <div
       ref={ref}
-      className={`relative flex-1 border-r border-moss-200/70 transition-colors last:border-r-0 ${
+      className={`relative min-w-0 flex-1 border-r border-moss-200/70 transition-colors last:border-r-0 ${
         drag?.dayIndex === dayIndex
           ? 'bg-moss-100/60'
           : day.isWeekend
@@ -358,7 +397,7 @@ function DayColumn({
               new Date(item.event.endsAt),
               'HH:mm',
             )}  ${item.event.title}${chipTooltip(decoration)}`}
-            className={`group absolute touch-none overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] leading-tight shadow-sm transition-shadow ${
+            className={`group absolute touch-none overflow-hidden rounded-md border-l-[3px] px-1 py-0.5 text-left text-[11px] leading-tight shadow-sm transition-shadow md:px-1.5 ${
               decoration?.canEdit === false
                 ? 'cursor-pointer hover:z-10 hover:shadow-md'
                 : isDragging
@@ -393,7 +432,15 @@ function DayColumn({
               <span className="truncate">{item.event.title}</span>
             </div>
             {item.height * DAY_HEIGHT > 30 && (
-              <div className="truncate tabular-nums text-moss-500">
+              // A week column on a phone is ~45px wide: a start–end pair spends
+              // all of it and pushes the title into an ellipsis, so there the
+              // block keeps only the name and the grid position says the rest.
+              // The phone's 3-day and Day views have the width and show both.
+              <div
+                className={`truncate tabular-nums text-moss-500 ${
+                  isDense ? 'hidden md:block' : ''
+                }`}
+              >
                 {format(new Date(item.event.startsAt), 'HH:mm')} –{' '}
                 {format(new Date(item.event.endsAt), 'HH:mm')}
               </div>

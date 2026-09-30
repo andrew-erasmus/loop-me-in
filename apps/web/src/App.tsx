@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  THREE_DAY_SPAN,
   categoryMap,
   dayKey,
   filterByCategories,
   filterByPeople,
+  filterByQuery,
+  getDayRun,
   getViewRange,
   getWeekDays,
   isDatedView,
@@ -15,6 +18,7 @@ import {
   startOfDay,
   type CalendarEvent,
   type CalendarView,
+  type DatedView,
   type EventTimes,
   type List,
   type ListItem,
@@ -24,6 +28,7 @@ import CalendarHeader from './components/calendar/CalendarHeader.js';
 import CategoryFilterBar from './components/calendar/CategoryFilterBar.js';
 import CategoryManager from './components/calendar/CategoryManager.js';
 import EventModal, { type EventDraft } from './components/calendar/EventModal.js';
+import FilterSheet from './components/calendar/FilterSheet.js';
 import SpaceModal from './components/auth/SpaceModal.js';
 import ListItemModal, { type ItemDraft } from './components/lists/ListItemModal.js';
 import ListModal from './components/lists/ListModal.js';
@@ -33,9 +38,7 @@ import MonthView from './components/calendar/MonthView.js';
 import SurpriseModal from './components/calendar/SurpriseModal.js';
 import TimeGridView from './components/calendar/TimeGridView.js';
 import MobileHeader from './components/layout/MobileHeader.js';
-import MobileCalendarBar, {
-  type MobileCalendarView,
-} from './components/layout/MobileCalendarBar.js';
+import MobileCalendarBar from './components/layout/MobileCalendarBar.js';
 import NewEventFab from './components/layout/NewEventFab.js';
 import MobileTabBar, { type MobileTab } from './components/layout/MobileTabBar.js';
 import { membersById, useLogout, useMe } from './hooks/useAuth.js';
@@ -78,6 +81,9 @@ export default function App() {
     () => new Set(),
   );
   const [hiddenUserIds, setHiddenUserIds] = useState<ReadonlySet<string>>(() => new Set());
+  /** Free-text filter over event titles and notes. */
+  const [query, setQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [draft, setDraft] = useState<EventDraft | null>(null);
   /** A surprise someone else planned — shown read-only, never in the editor. */
   const [surprise, setSurprise] = useState<CalendarEvent | null>(null);
@@ -94,14 +100,14 @@ export default function App() {
   const mobileTab: MobileTab =
     view === 'lists' ? 'lists' : view === 'memories' ? 'memories' : 'calendar';
 
-  // Which Month/Day/Agenda sub-view to return to when tapping back onto the
-  // Calendar tab from Lists or Memories — mirrors RN's own `useState` default
-  // of 'agenda' for the same reason: it's the most useful "what's next" view.
-  const [lastCalendarView, setLastCalendarView] = useState<MobileCalendarView>('agenda');
+  // Which dated sub-view to return to when tapping back onto the Calendar tab
+  // from Lists or Memories — mirrors RN's own `useState` default of 'agenda'
+  // for the same reason: it's the most useful "what's next" view. Typed as any
+  // dated view, not just the ones the phone bar offers, so a `week` carried
+  // over from desktop width survives a trip through Lists.
+  const [lastCalendarView, setLastCalendarView] = useState<DatedView>('agenda');
   useEffect(() => {
-    if (view === 'month' || view === 'day' || view === 'agenda') {
-      setLastCalendarView(view);
-    }
+    if (isDatedView(view)) setLastCalendarView(view);
   }, [view]);
 
   // A ticking "now" so the current-time indicator and the today highlight stay
@@ -156,11 +162,26 @@ export default function App() {
   const categoriesById = useMemo(() => categoryMap(categories), [categories]);
   const members = useMemo(() => membersById(me), [me]);
 
-  // Categories and people are independent filters over the same events.
+  // Categories, people and the search text are independent filters over the
+  // same events, composed in turn.
   const visibleEvents = useMemo(
-    () => filterByPeople(filterByCategories(events, hiddenCategoryIds), hiddenUserIds),
-    [events, hiddenCategoryIds, hiddenUserIds],
+    () =>
+      filterByQuery(
+        filterByPeople(filterByCategories(events, hiddenCategoryIds), hiddenUserIds),
+        query,
+      ),
+    [events, hiddenCategoryIds, hiddenUserIds, query],
   );
+
+  /** For the filter button's badge: how many axes are narrowing the calendar. */
+  const activeFilterCount =
+    hiddenCategoryIds.size + hiddenUserIds.size + (query.trim() === '' ? 0 : 1);
+
+  const clearFilters = useCallback(() => {
+    setHiddenCategoryIds(new Set());
+    setHiddenUserIds(new Set());
+    setQuery('');
+  }, []);
 
   const decorations = useMemo(
     () => buildDecorations(visibleEvents, members, items, lists, me?.user.id ?? null),
@@ -273,7 +294,15 @@ export default function App() {
   // pressing "d" in the title field doesn't switch views.
   useEffect(() => {
     const onKeyDown = (keyEvent: KeyboardEvent) => {
-      if (draft || showCategories || itemDraft || listDraft || showSpace || surprise)
+      if (
+        draft ||
+        showCategories ||
+        showFilters ||
+        itemDraft ||
+        listDraft ||
+        showSpace ||
+        surprise
+      )
         return;
       if (keyEvent.metaKey || keyEvent.ctrlKey || keyEvent.altKey) return;
 
@@ -289,6 +318,7 @@ export default function App() {
       const shortcuts: Record<string, () => void> = {
         m: () => setView('month'),
         w: () => setView('week'),
+        '3': () => setView('3day'),
         d: () => setView('day'),
         a: () => setView('agenda'),
         l: () => setView('lists'),
@@ -317,6 +347,7 @@ export default function App() {
   }, [
     draft,
     showCategories,
+    showFilters,
     itemDraft,
     listDraft,
     showSpace,
@@ -326,6 +357,12 @@ export default function App() {
   ]);
 
   const weekDays = useMemo(() => getWeekDays(anchorDate, now), [anchorDate, now]);
+  // The phone's version of the hour grid: three columns from the anchor, which
+  // is a run of days rather than a slice of a week — it can straddle two.
+  const threeDays = useMemo(
+    () => getDayRun(anchorDate, THREE_DAY_SPAN, now),
+    [anchorDate, now],
+  );
   // Day view is the same grid with a single column — pick the anchor's own day
   // out of its week rather than building a CalendarDay by hand.
   const singleDay = useMemo(
@@ -373,6 +410,8 @@ export default function App() {
           onNavigate={navigateAnchor}
           onToday={() => setAnchorDate(new Date())}
           onViewChange={setView}
+          onOpenFilters={() => setShowFilters(true)}
+          activeFilterCount={activeFilterCount}
         />
       )}
 
@@ -384,6 +423,8 @@ export default function App() {
           members={me.members}
           hiddenUserIds={hiddenUserIds}
           onTogglePerson={togglePerson}
+          query={query}
+          onQueryChange={setQuery}
         />
       )}
 
@@ -434,12 +475,14 @@ export default function App() {
             categories={categoriesById}
             decorations={decorations}
             onSelectEvent={openEvent}
+            isFiltered={activeFilterCount > 0 && events.length > 0}
+            onClearFilters={clearFilters}
           />
         ) : (
           <TimeGridView
-            // Remount when switching between week and day so the grid re-scrolls.
+            // Remount when switching between the grid's spans so it re-scrolls.
             key={view}
-            days={view === 'week' ? weekDays : singleDay}
+            days={view === 'week' ? weekDays : view === '3day' ? threeDays : singleDay}
             today={now}
             events={visibleEvents}
             categories={categoriesById}
@@ -447,6 +490,7 @@ export default function App() {
             onSelectEvent={openEvent}
             onSelectSlot={openNewEventAt}
             onMoveEvent={handleMoveEvent}
+            onShowDay={showDay}
           />
         )}
       </main>
@@ -570,6 +614,29 @@ export default function App() {
           event={surprise}
           planner={surprise.createdBy ? members.get(surprise.createdBy) : undefined}
           onClose={() => setSurprise(null)}
+        />
+      )}
+
+      {showFilters && (
+        <FilterSheet
+          categories={categories}
+          hiddenCategoryIds={hiddenCategoryIds}
+          onToggleCategory={toggleCategory}
+          members={me.members}
+          hiddenUserIds={hiddenUserIds}
+          onTogglePerson={togglePerson}
+          query={query}
+          onQueryChange={setQuery}
+          onClearAll={clearFilters}
+          onManageCategories={() => {
+            // The manager takes over the screen, so the sheet steps aside
+            // rather than stacking two sheets on a phone.
+            setShowFilters(false);
+            setShowCategories(true);
+          }}
+          onClose={() => setShowFilters(false)}
+          matchCount={visibleEvents.length}
+          totalCount={events.length}
         />
       )}
 

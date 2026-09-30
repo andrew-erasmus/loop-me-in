@@ -82,6 +82,28 @@ export function getMonthGrid(
   return weeks;
 }
 
+/**
+ * How many days the `3day` view shows and pages by. One constant rather than a
+ * 3 repeated across the range, the label and the columns — those three have to
+ * agree or the view pages over days it never showed.
+ */
+export const THREE_DAY_SPAN = 3;
+
+/** `count` consecutive days starting at `date`. The `3day` view's columns. */
+export function getDayRun(
+  date: Date,
+  count: number,
+  today: Date = new Date(),
+): CalendarDay[] {
+  const first = startOfDay(date);
+  return Array.from({ length: count }, (_, i) => {
+    const cursor = addDays(first, i);
+    // `monthAnchor` is the day itself: a run of days isn't anchored to one
+    // month, so no day in it is "borrowed" the way a month grid's padding is.
+    return toCalendarDay(cursor, cursor, today);
+  });
+}
+
 /** The 7 days of the week containing `date`. */
 export function getWeekDays(
   date: Date,
@@ -137,6 +159,11 @@ export function getViewRange(
         from: startOfWeek(date, { weekStartsOn }),
         to: endOfWeek(date, { weekStartsOn }),
       };
+    case '3day':
+      // Anchored on the date itself rather than snapped to a week boundary —
+      // the run starts where you are, and a run of three often straddles two
+      // weeks, so the containing week is not a range that would cover it.
+      return { from: startOfDay(date), to: endOfDay(addDays(date, THREE_DAY_SPAN - 1)) };
     case 'day':
       return { from: startOfDay(date), to: endOfDay(date) };
   }
@@ -150,6 +177,8 @@ export function navigate(date: Date, view: DatedView, direction: 1 | -1): Date {
       return addMonths(date, direction);
     case 'week':
       return addWeeks(date, direction);
+    case '3day':
+      return addDays(date, THREE_DAY_SPAN * direction);
     case 'day':
       return addDays(date, direction);
   }
@@ -167,15 +196,22 @@ export function formatPeriodLabel(
       return format(date, 'MMMM yyyy');
     case 'day':
       return format(date, 'EEEE d MMMM yyyy');
-    case 'week': {
-      const start = startOfWeek(date, { weekStartsOn });
-      const end = endOfWeek(date, { weekStartsOn });
-      if (isSameMonth(start, end)) {
-        return `${format(start, 'd')} – ${format(end, 'd MMM yyyy')}`;
-      }
-      return `${format(start, 'd MMM')} – ${format(end, 'd MMM yyyy')}`;
-    }
+    case 'week':
+      return formatSpan(
+        startOfWeek(date, { weekStartsOn }),
+        endOfWeek(date, { weekStartsOn }),
+      );
+    case '3day':
+      return formatSpan(date, addDays(date, THREE_DAY_SPAN - 1));
   }
+}
+
+/** `15 – 21 Sep 2026`, dropping the first month when both ends share one. */
+function formatSpan(start: Date, end: Date): string {
+  if (isSameMonth(start, end)) {
+    return `${format(start, 'd')} – ${format(end, 'd MMM yyyy')}`;
+  }
+  return `${format(start, 'd MMM')} – ${format(end, 'd MMM yyyy')}`;
 }
 
 /** Where `now` sits within the day, as a 0–1 fraction. Drives the time indicator. */

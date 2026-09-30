@@ -5,6 +5,7 @@ import {
   eventColor,
   eventsOnDay,
   filterByCategories,
+  filterByQuery,
   groupByDay,
   isHiddenSurprise,
   sortByStart,
@@ -138,6 +139,31 @@ describe('filterByCategories', () => {
   it('keeps uncategorised events regardless of filters', () => {
     const visible = filterByCategories(events, new Set(['work', 'health']));
     expect(visible.map((e) => e.id)).toEqual(['loose']);
+  });
+});
+
+describe('filterByQuery', () => {
+  const events = [
+    makeEvent('dentist', local(21, 9), local(21, 10), { notes: 'Bring the form' }),
+    makeEvent('Cinema', local(21, 19), local(21, 21)),
+    makeEvent('walk', local(22, 8), local(22, 9), { notes: null }),
+  ];
+
+  it('returns everything for a blank or whitespace query', () => {
+    expect(filterByQuery(events, '')).toHaveLength(3);
+    expect(filterByQuery(events, '   ')).toHaveLength(3);
+  });
+
+  it('matches titles case-insensitively', () => {
+    expect(filterByQuery(events, 'cine').map((e) => e.id)).toEqual(['Cinema']);
+  });
+
+  it('matches notes as well as titles', () => {
+    expect(filterByQuery(events, 'form').map((e) => e.id)).toEqual(['dentist']);
+  });
+
+  it('returns nothing when a real query matches nothing', () => {
+    expect(filterByQuery(events, 'holiday')).toHaveLength(0);
   });
 });
 

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { faSun } from '@fortawesome/free-solid-svg-icons';
+import { faFilterCircleXmark, faSun } from '@fortawesome/free-solid-svg-icons';
 import {
   dayKey,
   eventColor,
@@ -25,6 +25,13 @@ interface AgendaViewProps {
   categories: Map<string, Category>;
   decorations: Map<string, EventDecoration>;
   onSelectEvent: (event: CalendarEvent) => void;
+  /**
+   * True when the month does have events but a filter is hiding all of them —
+   * so the empty state can say which kind of empty this is. Not simply "a
+   * filter is on": a genuinely empty month is still a clear month.
+   */
+  isFiltered?: boolean;
+  onClearFilters?: () => void;
 }
 
 /**
@@ -38,6 +45,8 @@ export default function AgendaView({
   categories,
   decorations,
   onSelectEvent,
+  isFiltered = false,
+  onClearFilters,
 }: AgendaViewProps) {
   const days = useMemo(() => {
     const byDay = groupByDay(events);
@@ -51,14 +60,42 @@ export default function AgendaView({
   }, [anchorDate, today, events]);
 
   if (days.length === 0) {
+    // "Nothing scheduled" and "nothing left after filtering" look identical on
+    // screen and are entirely different facts — saying the wrong one sends
+    // someone looking for an event that was there all along.
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-        <Icon icon={faSun} size="lg" className="mx-auto h-10 w-10 text-moss-300" />
-        <p className="display text-xl text-moss-950">A clear month</p>
-        <p className="max-w-xs text-sm text-moss-400">
-          Nothing scheduled yet. Press <Key>N</Key> to add something, or{' '}
-          <Key>L</Key> to see what you have been meaning to do.
-        </p>
+        <Icon
+          icon={isFiltered ? faFilterCircleXmark : faSun}
+          size="lg"
+          className="mx-auto h-10 w-10 text-moss-300"
+        />
+        {isFiltered ? (
+          <>
+            <p className="display text-xl text-moss-950">Nothing matches</p>
+            <p className="max-w-xs text-sm text-moss-400">
+              This month has events, but none of them get past the filters you
+              have on.
+            </p>
+            {onClearFilters && (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="mt-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-pressed"
+              >
+                Clear filters
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="display text-xl text-moss-950">A clear month</p>
+            <p className="max-w-xs text-sm text-moss-400">
+              Nothing scheduled yet. Press <Key>N</Key> to add something, or{' '}
+              <Key>L</Key> to see what you have been meaning to do.
+            </p>
+          </>
+        )}
       </div>
     );
   }

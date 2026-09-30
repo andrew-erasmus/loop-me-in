@@ -17,6 +17,7 @@ import Icon from '../ui/Icon.js';
 const VIEW_LABELS: Record<CalendarView, string> = {
   month: 'Month',
   week: 'Week',
+  '3day': '3 days',
   day: 'Day',
   agenda: 'Agenda',
   lists: 'Lists',
@@ -27,6 +28,7 @@ const VIEW_LABELS: Record<CalendarView, string> = {
 const VIEW_KEYS: Record<CalendarView, string> = {
   month: 'M',
   week: 'W',
+  '3day': '3',
   day: 'D',
   agenda: 'A',
   lists: 'L',

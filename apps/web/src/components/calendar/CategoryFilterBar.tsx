@@ -1,5 +1,7 @@
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { Category, User } from '@date-calendar/core';
 import Avatar from '../ui/Avatar.js';
+import Icon from '../ui/Icon.js';
 
 interface CategoryFilterBarProps {
   categories: Category[];
@@ -8,15 +10,18 @@ interface CategoryFilterBarProps {
   members: User[];
   hiddenUserIds: ReadonlySet<string>;
   onTogglePerson: (userId: string) => void;
+  query: string;
+  onQueryChange: (query: string) => void;
 }
 
 /**
  * The colour legend, doubling as a visibility filter.
  *
- * Two independent axes over the same events — what it is, and whose it is —
- * built from the same chip so they read as one control rather than two
- * different ideas. The people row appears only once there is more than one
- * person to filter between.
+ * Three independent axes over the same events — what it is, whose it is, and
+ * what it's called — built from the same chip so they read as one control
+ * rather than three different ideas. The people row appears only once there is
+ * more than one person to filter between. The phone shows the same three axes
+ * in `FilterSheet` instead, where there is no width for a permanent strip.
  */
 export default function CategoryFilterBar({
   categories,
@@ -25,9 +30,9 @@ export default function CategoryFilterBar({
   members,
   hiddenUserIds,
   onTogglePerson,
+  query,
+  onQueryChange,
 }: CategoryFilterBarProps) {
-  if (categories.length === 0 && members.length < 2) return null;
-
   return (
     <div className="hidden flex-wrap items-center gap-1.5 border-b border-moss-200/80 bg-white px-5 py-2.5 md:flex">
       {categories.length > 0 && (
@@ -92,6 +97,35 @@ export default function CategoryFilterBar({
           })}
         </>
       )}
+
+      {/* Pushed to the trailing edge: it's a filter like the chips, but one you
+          type into rather than toggle, so it sits apart from them. */}
+      <div className="relative ml-auto">
+        <Icon
+          icon={faMagnifyingGlass}
+          size="xs"
+          className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-moss-400"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(changeEvent) => onQueryChange(changeEvent.target.value)}
+          placeholder="Search events"
+          aria-label="Search events"
+          autoComplete="off"
+          className="w-44 rounded-full border border-moss-200 bg-moss-50 py-1 pr-7 pl-7 text-xs outline-none transition focus:w-56 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/15"
+        />
+        {query !== '' && (
+          <button
+            type="button"
+            onClick={() => onQueryChange('')}
+            aria-label="Clear search"
+            className="absolute top-1/2 right-1 -translate-y-1/2 rounded-full p-1 text-moss-400 transition hover:bg-moss-200 hover:text-moss-700"
+          >
+            <Icon icon={faXmark} size="xs" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -123,6 +123,30 @@ export function filterByPeople(
   );
 }
 
+/**
+ * Narrow to events whose title or notes contain `query`, case-insensitively.
+ *
+ * The third independent axis alongside `filterByCategories` and
+ * `filterByPeople`, and composed the same way. A blank or whitespace-only
+ * query means "no filter" rather than "nothing matches", so a half-typed
+ * search that is then cleared doesn't leave an empty calendar behind.
+ *
+ * Notes are searched as well as titles because that is where the detail that
+ * distinguishes two similarly-named events usually lives ("Dentist" twice, one
+ * of them with "Andrew's, 9am, bring the form"). A surprise someone else
+ * planned has already been redacted by the server, so its real title and notes
+ * are not here to be matched — searching cannot leak one.
+ */
+export function filterByQuery(events: CalendarEvent[], query: string): CalendarEvent[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === '') return events;
+  return events.filter(
+    (event) =>
+      event.title.toLowerCase().includes(needle) ||
+      (event.notes ?? '').toLowerCase().includes(needle),
+  );
+}
+
 /** The colour identifying who created an event, or grey if the account is gone. */
 export function personColor(
   event: CalendarEvent,

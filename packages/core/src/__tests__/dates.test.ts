@@ -5,6 +5,7 @@ import {
   formatPeriodLabel,
   fractionOfDay,
   getHourSlots,
+  getDayRun,
   getMonthGrid,
   getViewRange,
   getWeekDays,
@@ -87,6 +88,36 @@ describe('getWeekDays', () => {
   });
 });
 
+describe('getDayRun', () => {
+  it('starts at the given day and runs forward', () => {
+    const days = getDayRun(local(2026, 9, 30), 3, local(2026, 9, 30));
+    expect(days.map((day) => day.key)).toEqual([
+      '2026-09-30',
+      '2026-10-01',
+      '2026-10-02',
+    ]);
+  });
+
+  it('treats every day in the run as in-month', () => {
+    // Unlike a month grid, a run has no month to borrow days from — a day
+    // greyed out as "not this month" here would be meaningless.
+    const days = getDayRun(local(2026, 9, 30), 3, local(2026, 9, 30));
+    expect(days.every((day) => day.inMonth)).toBe(true);
+  });
+
+  it('marks today and weekends', () => {
+    // Fri 2 Oct 2026 through Sun 4 Oct, viewed on the Saturday.
+    const days = getDayRun(local(2026, 10, 2), 3, local(2026, 10, 3));
+    expect(days.map((day) => day.isWeekend)).toEqual([false, true, true]);
+    expect(days.map((day) => day.isToday)).toEqual([false, true, false]);
+  });
+
+  it('normalises a mid-day start to the start of that day', () => {
+    const days = getDayRun(local(2026, 9, 21, 15, 30), 2, local(2026, 9, 21));
+    expect(days[0]!.date.getHours()).toBe(0);
+  });
+});
+
 describe('getViewRange', () => {
   it('covers the whole visible month grid, not just the month', () => {
     const { from, to } = getViewRange(local(2026, 9, 15), 'month');
@@ -108,6 +139,21 @@ describe('getViewRange', () => {
     expect(dayKey(from)).toBe('2026-09-21');
     expect(dayKey(to)).toBe('2026-09-27');
   });
+
+  it('covers three days from the anchor in 3day view', () => {
+    const { from, to } = getViewRange(local(2026, 9, 24), '3day');
+    expect(dayKey(from)).toBe('2026-09-24');
+    expect(dayKey(to)).toBe('2026-09-26');
+    expect(to.getHours()).toBe(23);
+  });
+
+  it('follows a 3day run across a month boundary', () => {
+    // The run is anchored on the date, not snapped to a week, so the range
+    // has to straddle the month rather than stopping at the 30th.
+    const { from, to } = getViewRange(local(2026, 9, 29), '3day');
+    expect(dayKey(from)).toBe('2026-09-29');
+    expect(dayKey(to)).toBe('2026-10-01');
+  });
 });
 
 describe('navigate', () => {
@@ -115,6 +161,9 @@ describe('navigate', () => {
     const anchor = local(2026, 9, 21);
     expect(dayKey(navigate(anchor, 'day', 1))).toBe('2026-09-22');
     expect(dayKey(navigate(anchor, 'week', 1))).toBe('2026-09-28');
+    // Three days forward, so paging never steps over a day it didn't show.
+    expect(dayKey(navigate(anchor, '3day', 1))).toBe('2026-09-24');
+    expect(dayKey(navigate(anchor, '3day', -1))).toBe('2026-09-18');
     expect(dayKey(navigate(anchor, 'month', 1))).toBe('2026-10-21');
     expect(dayKey(navigate(anchor, 'agenda', -1))).toBe('2026-08-21');
   });
@@ -133,8 +182,13 @@ describe('formatPeriodLabel', () => {
     expect(formatPeriodLabel(anchor, 'week')).toBe('21 – 27 Sep 2026');
   });
 
-  it('spells out both months when a week straddles two', () => {
+  it('labels a 3day run by the days it actually shows', () => {
+    expect(formatPeriodLabel(local(2026, 9, 21), '3day')).toBe('21 – 23 Sep 2026');
+  });
+
+  it('spells out both months when a span straddles two', () => {
     expect(formatPeriodLabel(local(2026, 9, 30), 'week')).toBe('28 Sep – 4 Oct 2026');
+    expect(formatPeriodLabel(local(2026, 9, 30), '3day')).toBe('30 Sep – 2 Oct 2026');
   });
 });
 

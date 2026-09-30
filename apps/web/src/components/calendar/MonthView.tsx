@@ -87,7 +87,18 @@ export default function MonthView({
         ))}
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-rows-6">
+      {/*
+        Desktop divides the available height into six equal rows — a month is a
+        shape you take in at a glance, and reflowing it would spoil that.
+
+        A phone has nowhere near the height for that: six equal rows leave cells
+        about 60px tall, which is both an unreliable tap target and too short to
+        show an event's name. So below `md` a row gets a comfortable floor and
+        grows past it when a day has more to show — three chips and a "+N more"
+        need more room than three chips do — and the rest of the month scrolls
+        into view rather than being squeezed into the fold.
+      */}
+      <div className="scroll-slim grid min-h-0 flex-1 auto-rows-[minmax(7rem,max-content)] overflow-y-auto md:auto-rows-auto md:grid-rows-6 md:overflow-hidden">
         {weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7">
             {week.map((day) => {
@@ -119,7 +130,7 @@ export default function MonthView({
                 >
                   <div className="flex items-center justify-between px-0.5">
                     <span
-                      className={`display flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                      className={`display flex h-7 w-7 items-center justify-center rounded-full text-sm md:h-6 md:w-6 md:text-xs ${
                         day.isToday
                           ? 'bg-primary text-white'
                           : day.inMonth
@@ -155,7 +166,7 @@ export default function MonthView({
                           if (consumeClickSuppression()) return;
                           onShowDay(day.date);
                         }}
-                        className="px-1 text-left text-[11px] font-medium text-moss-500 hover:text-moss-900 hover:underline"
+                        className="px-1 py-1 text-left text-[11px] font-medium text-moss-500 hover:text-moss-900 hover:underline md:py-0"
                       >
                         +{overflow} more
                       </button>
@@ -218,6 +229,11 @@ function MonthChip({
 
   // All-day events read as a solid bar; timed events as a dot plus the time,
   // which is the quickest way to tell the two apart at a glance.
+  //
+  // On a phone the time is dropped (`hidden md:inline` below) and the dot alone
+  // carries that distinction. A cell is only about seven characters wide there,
+  // and "09:00" spends five of them saying the one thing the grid position
+  // already implies — what the event *is* is the part you can't infer.
   const statusIcon = chipStatusIcon(decoration);
   const listEmoji = chipListEmoji(decoration);
 
@@ -226,7 +242,7 @@ function MonthChip({
       <button
         {...shared}
         title={`${event.title}${chipTooltip(decoration)}`}
-        className={`flex touch-none items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white transition ${dragClasses}`}
+        className={`flex touch-none items-center gap-1 truncate rounded px-1.5 py-1 text-left text-[11px] font-medium text-white transition md:py-0.5 ${dragClasses}`}
         style={{ backgroundColor: color, ...personAccent(decoration) }}
       >
         {statusIcon && <Icon icon={statusIcon} size="xs" className="shrink-0 text-white" />}
@@ -240,7 +256,7 @@ function MonthChip({
     <button
       {...shared}
       title={`${format(new Date(event.startsAt), 'HH:mm')} ${event.title}${chipTooltip(decoration)}`}
-      className={`flex touch-none items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-moss-700 transition hover:bg-moss-100 ${dragClasses}`}
+      className={`flex touch-none items-center gap-1 truncate rounded px-1 py-1 text-left text-[11px] text-moss-700 transition hover:bg-moss-100 md:py-0.5 ${dragClasses}`}
       style={personAccent(decoration)}
     >
       <span
@@ -248,7 +264,7 @@ function MonthChip({
         className="h-1.5 w-1.5 shrink-0 rounded-full"
         style={{ backgroundColor: color }}
       />
-      <span className="shrink-0 tabular-nums text-moss-500">
+      <span className="hidden shrink-0 tabular-nums text-moss-500 md:inline">
         {format(new Date(event.startsAt), 'HH:mm')}
       </span>
       {statusIcon && <Icon icon={statusIcon} size="xs" className="shrink-0" />}

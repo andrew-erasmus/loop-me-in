@@ -8,11 +8,25 @@ import { z } from 'zod';
  * two cannot drift apart.
  */
 
-export const CALENDAR_VIEWS = ['month', 'week', 'day', 'agenda', 'lists', 'memories'] as const;
+/**
+ * `3day` is the same hour grid as `week` over a shorter span. It exists for
+ * phone width, where seven columns come out at about 45pt each — too narrow to
+ * read an event in, let alone tap one. Three columns are legible, and paging
+ * moves three days at a time so nothing is skipped over.
+ */
+export const CALENDAR_VIEWS = [
+  'month',
+  'week',
+  '3day',
+  'day',
+  'agenda',
+  'lists',
+  'memories',
+] as const;
 export type CalendarView = (typeof CALENDAR_VIEWS)[number];
 
 /** Views that show a date range and respond to period navigation. */
-export const DATED_VIEWS = ['month', 'week', 'day', 'agenda'] as const;
+export const DATED_VIEWS = ['month', 'week', '3day', 'day', 'agenda'] as const;
 export type DatedView = (typeof DATED_VIEWS)[number];
 
 export function isDatedView(view: CalendarView): view is DatedView {
