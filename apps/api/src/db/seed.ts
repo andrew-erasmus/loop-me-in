@@ -210,6 +210,27 @@ async function seed() {
       categoryId: categoryByName.get('Other')!,
       createdBy: alice.id,
     },
+    {
+      // Four days, so a multi-day event is visible as one continuous bar
+      // without having to create one first. 23:59 on the last day, matching
+      // what the all-day toggle in the event dialog writes.
+      title: 'Lisbon',
+      notes: 'Flights booked. Still need somewhere to stay.',
+      startsAt: at(9, 0, 0),
+      endsAt: at(12, 23, 59),
+      allDay: true,
+      categoryId: categoryByName.get('Personal')!,
+      createdBy: alice.id,
+    },
+    {
+      // Crosses midnight without being all-day: it should read as one bar over
+      // two days in the month grid, and stay a clipped block in the hour grid.
+      title: 'Red-eye to Lisbon',
+      startsAt: at(8, 22, 0),
+      endsAt: at(9, 9, 30),
+      categoryId: categoryByName.get('Personal')!,
+      createdBy: bob.id,
+    },
   ];
 
   await db.insert(schema.events).values(

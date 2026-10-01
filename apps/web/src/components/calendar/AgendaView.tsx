@@ -3,6 +3,8 @@ import { faFilterCircleXmark, faSun } from '@fortawesome/free-solid-svg-icons';
 import {
   dayKey,
   eventColor,
+  eventDayIndex,
+  eventDaySpan,
   format,
   getMonthGrid,
   groupByDay,
@@ -38,6 +40,32 @@ interface AgendaViewProps {
  * A flat chronological list of everything in the current month's window.
  * Empty days are skipped entirely — that is the point of an agenda.
  */
+/**
+ * When an event happens, read from the row's own day.
+ *
+ * A multi-day event keeps its row on every day it touches — in a list, each day
+ * should say what is on it — but `09:00 – 17:00` would be a lie on day 2 of 4,
+ * because those two times belong to different days. So the first day reads
+ * `from 22:00`, the last `until 09:00`, and the days wholly inside it are what
+ * they are: all day.
+ */
+function whenLabel(event: CalendarEvent, day: Date): string {
+  if (event.allDay) return 'All day';
+
+  const span = eventDaySpan(event);
+  if (span === 1) {
+    return `${format(new Date(event.startsAt), 'HH:mm')} – ${format(
+      new Date(event.endsAt),
+      'HH:mm',
+    )}`;
+  }
+
+  const index = eventDayIndex(event, day);
+  if (index <= 1) return `from ${format(new Date(event.startsAt), 'HH:mm')}`;
+  if (index >= span) return `until ${format(new Date(event.endsAt), 'HH:mm')}`;
+  return 'All day';
+}
+
 export default function AgendaView({
   anchorDate,
   today,
@@ -164,13 +192,15 @@ export default function AgendaView({
                         </span>
                       )}
                     </span>
-                    <span className="shrink-0 text-xs tabular-nums text-moss-500">
-                      {event.allDay
-                        ? 'All day'
-                        : `${format(new Date(event.startsAt), 'HH:mm')} – ${format(
-                            new Date(event.endsAt),
-                            'HH:mm',
-                          )}`}
+                    <span className="shrink-0 text-right">
+                      <span className="block text-xs tabular-nums text-moss-500">
+                        {whenLabel(event, day.date)}
+                      </span>
+                      {eventDaySpan(event) > 1 && (
+                        <span className="mt-0.5 block text-[10px] font-medium tracking-wide text-moss-400 uppercase">
+                          Day {eventDayIndex(event, day.date)} of {eventDaySpan(event)}
+                        </span>
+                      )}
                     </span>
                   </button>
                 </li>

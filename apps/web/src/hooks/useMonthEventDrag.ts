@@ -21,6 +21,13 @@ export interface MonthDragState {
   eventId: string;
   /** `yyyy-MM-dd` of the cell under the pointer, for highlighting. */
   overDayKey: string | null;
+  /**
+   * The same cell as a `Date`. Carried alongside the key so the view can build
+   * its drag preview with `moveEventToDay` — the very function the drop will
+   * commit — rather than parsing the key back into a date and re-deriving the
+   * arithmetic itself.
+   */
+  overDate: Date | null;
 }
 
 interface UseMonthEventDragOptions {
@@ -87,7 +94,11 @@ export function useMonthEventDrag({ onCommit }: UseMonthEventDragOptions) {
 
       const target = dayCellAt(pointerEvent.clientX, pointerEvent.clientY);
       current.target = target;
-      setDrag({ eventId: current.event.id, overDayKey: target?.key ?? null });
+      setDrag({
+        eventId: current.event.id,
+        overDayKey: target?.key ?? null,
+        overDate: target?.date ?? null,
+      });
     };
 
     const onPointerUp = () => {

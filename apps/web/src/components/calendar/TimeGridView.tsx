@@ -8,6 +8,7 @@ import {
   getHourSlots,
   isSameDay,
   layoutDayEvents,
+  layoutDaySegments,
   type CalendarDay,
   type CalendarEvent,
   type Category,
@@ -94,16 +95,26 @@ export default function TimeGridView({
     onCommit: onMoveEvent,
   });
 
-  const allDayByDay = useMemo(
-    () =>
-      days.map((day) => ({
-        day,
-        events: eventsOnDay(events, day.date).filter((event) => event.allDay),
-      })),
+  /**
+   * The all-day band, as segments across the day columns rather than a chip per
+   * column — a three-day holiday is one event and should read as one bar.
+   *
+   * `layoutDaySegments` takes any run of consecutive days, which is what lets
+   * the band reuse the month grid's engine across its 7, 3 or 1 columns.
+   * Timed events stay out of it: the hour grid below already clips those per
+   * column and flags the cut with `continuesFromPreviousDay` / `IntoNextDay`,
+   * which is the right reading when there is an hour axis to place them on.
+   */
+  const allDaySegments = useMemo(
+    () => layoutDaySegments(events.filter((event) => event.allDay), days),
     [days, events],
   );
 
-  const hasAllDayRow = allDayByDay.some((entry) => entry.events.length > 0);
+  const allDayLaneCount = allDaySegments.reduce(
+    (most, segment) => Math.max(most, segment.lane + 1),
+    0,
+  );
+  const hasAllDayRow = allDaySegments.length > 0;
   const showsToday = days.some((day) => isSameDay(day.date, today));
 
   /**
@@ -179,38 +190,70 @@ export default function TimeGridView({
           <div className="flex w-11 shrink-0 items-center justify-end border-r border-moss-200 pr-1.5 text-[10px] font-medium text-moss-400 md:w-14 md:pr-2 md:text-[11px]">
             All day
           </div>
-          {allDayByDay.map(({ day, events: allDayEvents }) => (
-            <div
-              key={day.key}
-              className="flex min-w-0 flex-1 flex-col gap-0.5 border-r border-moss-200 p-1 last:border-r-0"
-            >
-              {allDayEvents.map((event) => (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={() => onSelectEvent(event)}
-                  title={`${event.title}${chipTooltip(decorations.get(event.id))}`}
-                  className="flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white"
+          <div
+            className="grid min-w-0 flex-1 gap-y-0.5 py-1"
+            style={{
+              gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${allDayLaneCount}, auto)`,
+            }}
+          >
+            {/* Column hairlines, behind the bars so one can cross them. */}
+            {days.map((day, index) => (
+              <div
+                key={day.key}
+                aria-hidden
+                style={{ gridColumn: index + 1, gridRow: '1 / -1' }}
+                className="border-r border-moss-200 last:border-r-0"
+              />
+            ))}
+
+            {allDaySegments.map((segment) => {
+              const decoration = decorations.get(segment.event.id);
+              return (
+                <div
+                  key={segment.event.id}
                   style={{
-                    backgroundColor: eventColor(event, categories),
-                    ...(decorations.get(event.id)?.personColor
-                      ? {
-                          boxShadow: `inset 2px 0 0 0 ${decorations.get(event.id)!.personColor}`,
-                        }
-                      : {}),
+                    gridColumn: `${segment.startColumn + 1} / span ${segment.span}`,
+                    gridRow: segment.lane + 1,
                   }}
+                  className="min-w-0 px-1"
                 >
-                  {chipStatusIcon(decorations.get(event.id)) && (
-                    <Icon icon={chipStatusIcon(decorations.get(event.id))!} size="xs" className="shrink-0 text-white" />
-                  )}
-                  {chipListEmoji(decorations.get(event.id)) && (
-                    <span aria-hidden>{chipListEmoji(decorations.get(event.id))}</span>
-                  )}
-                  <span className="truncate">{event.title}</span>
-                </button>
-              ))}
-            </div>
-          ))}
+                  <button
+                    type="button"
+                    data-event-id={segment.event.id}
+                    onClick={() => onSelectEvent(segment.event)}
+                    title={`${segment.event.title}${chipTooltip(decoration)}`}
+                    className="flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white"
+                    style={{
+                      backgroundColor: eventColor(segment.event, categories),
+                      // The owner's accent goes on a leading edge only when the
+                      // event really starts here, not where it was clipped.
+                      ...(decoration?.personColor && !segment.continuesBefore
+                        ? { boxShadow: `inset 2px 0 0 0 ${decoration.personColor}` }
+                        : {}),
+                      // A clipped bar shouldn't look like it starts or ends here.
+                      borderTopLeftRadius: segment.continuesBefore ? 0 : undefined,
+                      borderBottomLeftRadius: segment.continuesBefore ? 0 : undefined,
+                      borderTopRightRadius: segment.continuesAfter ? 0 : undefined,
+                      borderBottomRightRadius: segment.continuesAfter ? 0 : undefined,
+                    }}
+                  >
+                    {chipStatusIcon(decoration) && (
+                      <Icon
+                        icon={chipStatusIcon(decoration)!}
+                        size="xs"
+                        className="shrink-0 text-white"
+                      />
+                    )}
+                    {chipListEmoji(decoration) && (
+                      <span aria-hidden>{chipListEmoji(decoration)}</span>
+                    )}
+                    <span className="truncate">{segment.event.title}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

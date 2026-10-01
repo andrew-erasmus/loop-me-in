@@ -8,6 +8,7 @@
 export * from './types.js';
 export * from './dates.js';
 export * from './layout.js';
+export * from './span.js';
 export * from './drag.js';
 export * from './events.js';
 export * from './lists.js';

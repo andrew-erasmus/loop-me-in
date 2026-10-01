@@ -108,6 +108,7 @@ apps/web          React + Vite + Tailwind.
 | `types.ts` | Domain types and the Zod schemas both the API and the clients validate with |
 | `dates.ts` | Month grid, week days, hour slots, view ranges, period navigation |
 | `layout.ts` | Overlap/column layout for the time grid, returned as **fractions, not pixels** |
+| `span.ts` | Which day columns a multi-day event covers, and how bars stack into lanes |
 | `drag.ts` | What a drag does to an event's times — move, resize, re-date |
 | `events.ts` | Range filtering, grouping by day, category and person colour resolution |
 | `lists.ts` | Item sorting and grouping, keenness, and the event→item index |
@@ -116,6 +117,13 @@ apps/web          React + Vite + Tailwind.
 `layout.ts` is the piece worth protecting. Working out where overlapping events sit is the
 genuinely fiddly part of a calendar, and because it returns ratios rather than pixels it can be
 tested on its own — turning a ratio into `ratio * HOUR_HEIGHT` is the grid's job, not the maths'.
+
+`span.ts` is the same idea on the other axis. `layout.ts` answers "where does this sit on an hour
+axis"; `span.ts` answers "which days does it reach across, and what does it sit above or below".
+It returns column indices and lane numbers, so a Mon–Thu trip is one bar four cells wide rather
+than four identical chips, and turning a lane into a CSS grid row is the view's job. It takes any
+run of consecutive days, which is why one function serves the month grid's seven columns and the
+time grid's all-day band at seven, three or one.
 
 `drag.ts` follows the same rule from the other direction. A gesture is reduced to "N days
 sideways, M minutes vertically" *before* it reaches core, so the file knows nothing about pointers
@@ -193,6 +201,10 @@ Swagger UI is on the API's own port, so reach it at `:3031/docs` rather than thr
   change its day; drag the handle on its bottom edge to change how long it lasts. In Month view
   drag a chip onto another day to re-date it, keeping its time. Drops snap to 15 minutes, and
   `Esc` mid-drag abandons the move.
+- **Something lasting more than a day** — anything crossing midnight draws as one continuous bar
+  across the days it covers, squared off where it crosses into the next week rather than rounded,
+  which would claim it ends there. Dragging the bar moves the whole thing and keeps its length.
+  In Agenda it still appears on each day, marked `Day 2 of 4`.
 - **Categories** — the `Categories` button opens a manager for adding, renaming, recolouring and
   deleting them. The chips under the header double as show/hide filters, alongside a chip per
   person for filtering by whose event it is.
