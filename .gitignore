@@ -6,15 +6,22 @@ dist/
 *.db-wal
 .DS_Store
 *.local
+.vercel
+
+# TypeScript's incremental build cache. It is rewritten whenever a source file
+# changes, so tracking it puts a whole-file diff of a build artifact into every
+# commit that touches TypeScript — and makes a merge conflict out of two people
+# having compiled.
+*.tsbuildinfo
 
 # Secrets: OAuth credentials and the session key.
 # Real .env files never get committed; the *.example templates always do.
+#
+# Nothing after this block may re-ignore `.env*`. A later blanket rule wins over
+# these negations and silently drops the templates from the repo — which is what
+# a stray `.env*` here and in apps/*/.gitignore had already done, while
+# OAUTH-AND-DEPLOYMENT.md went on telling you to open files git was hiding.
 .env
 .env.*
 !.env.example
 !.env.*.example
-
-# Expo
-.expo/
-.vercel
-.env*
