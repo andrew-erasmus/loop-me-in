@@ -1,9 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { spaceRenameSchema } from '../core.js';
+import { spaceCreateSchema, spaceRenameSchema } from '../core.js';
 import { createInvite, redeemInvite } from '../auth/invites.js';
+import { setDevActiveSpace } from '../auth/guard.js';
 import {
   clearSessionCookie,
+  createSpace,
   destroySession,
   isMember,
   membersOfSpace,
@@ -14,7 +16,7 @@ import {
 } from '../auth/session.js';
 import { bodySchemas, errorResponse, idParam, ref } from '../openapi.js';
 import { badRequest, forbidden, notFound, parseBody } from './helpers.js';
-import { toSpace, toUser } from './present.js';
+import { toSpace, toSpaceSummary, toUser } from './present.js';
 import type { SpaceRow, UserRow } from '../db/schema.js';
 
 /**
@@ -29,18 +31,29 @@ const joinSchema = z.object({
 
 const switchSpaceSchema = z.object({ spaceId: z.string().min(1) });
 
-/** The `/auth/me` payload: who you are, where you are, who else is here. */
+/**
+ * The `/auth/me` payload: who you are, where you are, who else is here — and
+ * who is in each of your other spaces, which is what the Spaces page lists.
+ * One query per space; an account belongs to a handful at most.
+ */
 async function describeSession(user: UserRow, space: SpaceRow) {
-  const [members, spaces] = await Promise.all([
-    membersOfSpace(space.id),
-    spacesForUser(user.id),
-  ]);
+  const spaces = await spacesForUser(user.id);
+  const summaries = await Promise.all(
+    spaces.map(async (row) => toSpaceSummary(row, await membersOfSpace(row.id))),
+  );
+  const current = summaries.find((summary) => summary.id === space.id);
   return {
     user: toUser(user),
     space: toSpace(space),
-    members: members.map(toUser),
-    spaces: spaces.map(toSpace),
+    members: current?.members ?? (await membersOfSpace(space.id)).map(toUser),
+    spaces: summaries,
   };
+}
+
+/** Point the caller at a space: their session row, or the dev bypass's memory. */
+async function enterSpace(sessionId: string | null, userId: string, spaceId: string) {
+  if (sessionId) await setSessionSpace(sessionId, spaceId);
+  else setDevActiveSpace(userId, spaceId);
 }
 
 export default async function authRoutes(app: FastifyInstance) {
@@ -112,11 +125,34 @@ export default async function authRoutes(app: FastifyInstance) {
       const space = spaces.find((candidate) => candidate.id === spaceId);
       if (!space) throw notFound('Space not found');
 
-      // The dev bypass has no session row to update; it always resolves to the
-      // user's first space, which is the only one it can be looking at.
-      if (sessionId) await setSessionSpace(sessionId, spaceId);
-
+      await enterSpace(sessionId, user.id, spaceId);
       return describeSession(user, space);
+    },
+  );
+
+  app.post(
+    '/spaces',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Create a space',
+        description:
+          'Starts a new, empty space with you as its only member, and switches this session to it. Invite someone into it with `POST /spaces/invites`.',
+        body: bodySchemas.spaceCreate,
+        response: {
+          201: ref.me,
+          400: errorResponse('Empty name.'),
+          401: errorResponse('Not signed in.'),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { name } = parseBody(spaceCreateSchema, request.body);
+      const { user, sessionId } = request.auth;
+
+      const space = await createSpace(name, user.id);
+      await enterSpace(sessionId, user.id, space.id);
+      return reply.code(201).send(await describeSession(user, space));
     },
   );
 
@@ -165,7 +201,7 @@ export default async function authRoutes(app: FastifyInstance) {
         throw badRequest('That invite link is no longer valid. Ask for a new one.');
       }
 
-      if (sessionId) await setSessionSpace(sessionId, space.id);
+      await enterSpace(sessionId, user.id, space.id);
       return describeSession(user, space);
     },
   );

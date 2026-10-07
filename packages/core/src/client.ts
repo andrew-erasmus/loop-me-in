@@ -137,6 +137,15 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
       );
     },
 
+    /** Start a new, empty space with you in it, and switch to it. */
+    createSpace(name: string): Promise<Me> {
+      return request(
+        '/spaces',
+        { method: 'POST', body: JSON.stringify({ name }) },
+        (data) => meSchema.parse(data),
+      );
+    },
+
     /** Rename a space you belong to. */
     renameSpace(spaceId: string, name: string): Promise<Me> {
       return request(
@@ -146,7 +155,7 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
       );
     },
 
-    /** Mint a single-use invite link for the other person. */
+    /** Mint a single-use invite link into the space you are looking at. */
     createInvite(): Promise<Invite> {
       return request('/spaces/invites', { method: 'POST' }, (data) =>
         inviteSchema.parse(data),

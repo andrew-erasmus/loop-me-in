@@ -55,6 +55,15 @@ export function useSwitchSpace() {
   });
 }
 
+/** A new space is a session change like any other: you land in it, empty. */
+export function useCreateSpace() {
+  const reset = useResetOnSessionChange();
+  return useMutation({
+    mutationFn: (name: string) => api.createSpace(name),
+    onSuccess: (me) => reset(me),
+  });
+}
+
 /**
  * Renaming doesn't change which events/lists/items are cached — only the
  * label on top of them — so this updates the `me` query directly rather than

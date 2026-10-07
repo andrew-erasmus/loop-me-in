@@ -22,6 +22,7 @@ export const CALENDAR_VIEWS = [
   'agenda',
   'lists',
   'memories',
+  'spaces',
 ] as const;
 export type CalendarView = (typeof CALENDAR_VIEWS)[number];
 
@@ -61,19 +62,28 @@ export const spaceSchema = z.object({
   createdAt: z.string(),
 });
 
+/** A space as the Spaces page lists it: the space, and who is in it. */
+export const spaceSummarySchema = spaceSchema.extend({
+  members: userSchema.array(),
+});
+
 /** What `GET /auth/me` returns: who you are, where you are, and who else is here. */
 export const meSchema = z.object({
   user: userSchema,
   space: spaceSchema,
   members: userSchema.array(),
-  /** Every space this account belongs to, for the space switcher. */
-  spaces: spaceSchema.array(),
+  /** Every space this account belongs to, oldest first, with its members. */
+  spaces: spaceSummarySchema.array(),
 });
 
 export const spaceRenameSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(60),
 });
 export type SpaceRename = z.infer<typeof spaceRenameSchema>;
+
+/** Creating a space takes nothing but its name — the same rule as renaming one. */
+export const spaceCreateSchema = spaceRenameSchema;
+export type SpaceCreate = z.infer<typeof spaceCreateSchema>;
 
 export const inviteSchema = z.object({
   code: z.string(),
@@ -84,6 +94,7 @@ export const inviteSchema = z.object({
 
 export type User = z.infer<typeof userSchema>;
 export type Space = z.infer<typeof spaceSchema>;
+export type SpaceSummary = z.infer<typeof spaceSummarySchema>;
 export type Me = z.infer<typeof meSchema>;
 export type Invite = z.infer<typeof inviteSchema>;
 

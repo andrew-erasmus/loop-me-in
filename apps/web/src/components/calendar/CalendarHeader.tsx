@@ -23,6 +23,7 @@ const VIEW_LABELS: Record<CalendarView, string> = {
   agenda: 'Agenda',
   lists: 'Lists',
   memories: 'Memories',
+  spaces: 'Spaces',
 };
 
 /** Keyboard hint shown in each view button's tooltip. */
@@ -34,6 +35,7 @@ const VIEW_KEYS: Record<CalendarView, string> = {
   agenda: 'A',
   lists: 'L',
   memories: 'Y',
+  spaces: 'S',
 };
 
 interface CalendarHeaderProps {

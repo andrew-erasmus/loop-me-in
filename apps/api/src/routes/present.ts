@@ -5,6 +5,7 @@ import {
   type List,
   type ListItem,
   type Space,
+  type SpaceSummary,
   type User,
 } from '../core.js';
 import type {
@@ -37,6 +38,10 @@ export function toUser(row: UserRow): User {
 
 export function toSpace(row: SpaceRow): Space {
   return { id: row.id, name: row.name, createdAt: row.createdAt };
+}
+
+export function toSpaceSummary(row: SpaceRow, members: UserRow[]): SpaceSummary {
+  return { ...toSpace(row), members: members.map(toUser) };
 }
 
 export function toCategory(row: CategoryRow): Category {

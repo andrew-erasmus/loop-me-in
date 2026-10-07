@@ -156,8 +156,8 @@ export default function SpaceModal({
           )}
           {me.spaces.length === 1 && (
             <p className="mt-2 text-xs text-moss-400">
-              This is your only calendar. You get another one by accepting someone else's
-              invite.
+              This is your only calendar. Start another from the Spaces page, or accept
+              someone else's invite.
             </p>
           )}
         </section>

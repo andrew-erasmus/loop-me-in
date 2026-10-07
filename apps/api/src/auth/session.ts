@@ -314,6 +314,18 @@ export async function assignColorInSpace(spaceId: string, userId: string): Promi
   await db.update(schema.users).set({ color }).where(eq(schema.users.id, userId));
 }
 
+/** A new, empty space with just its creator in it, as owner. */
+export async function createSpace(name: string, ownerId: string): Promise<SpaceRow> {
+  const space = {
+    id: randomUUID(),
+    name,
+    createdAt: new Date().toISOString(),
+  };
+  await db.insert(schema.spaces).values(space);
+  await addMember(space.id, ownerId, 'owner');
+  return space;
+}
+
 /**
  * The space a user lands in after signing in: their existing one, or a fresh
  * one named after them. Nobody ever sees a "create a space first" screen.
@@ -322,12 +334,5 @@ export async function ensureSpaceForUser(user: UserRow): Promise<SpaceRow> {
   const existing = await spacesForUser(user.id);
   if (existing.length > 0) return existing[0]!;
 
-  const space = {
-    id: randomUUID(),
-    name: `${user.name.split(' ')[0]}'s calendar`,
-    createdAt: new Date().toISOString(),
-  };
-  await db.insert(schema.spaces).values(space);
-  await addMember(space.id, user.id, 'owner');
-  return space;
+  return createSpace(`${user.name.split(' ')[0]}'s calendar`, user.id);
 }

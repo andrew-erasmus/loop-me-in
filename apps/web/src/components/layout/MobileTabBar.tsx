@@ -1,22 +1,24 @@
 import {
   faCalendarDays,
   faClockRotateLeft,
+  faUserGroup,
   faWandMagicSparkles,
   type IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
 import Icon from '../ui/Icon.js';
 
-export type MobileTab = 'calendar' | 'lists' | 'memories';
+export type MobileTab = 'calendar' | 'lists' | 'memories' | 'spaces';
 
 const TABS: { tab: MobileTab; label: string; icon: IconDefinition }[] = [
   { tab: 'calendar', label: 'Calendar', icon: faCalendarDays },
   { tab: 'lists', label: 'Lists', icon: faWandMagicSparkles },
   { tab: 'memories', label: 'Memories', icon: faClockRotateLeft },
+  { tab: 'spaces', label: 'Spaces', icon: faUserGroup },
 ];
 
 /**
- * The phone-width bottom tab bar — Calendar / Lists / Memories. Desktop keeps
- * them as three of the buttons in `CalendarHeader`'s view switcher instead.
+ * The phone-width bottom tab bar — Calendar / Lists / Memories / Spaces.
+ * Desktop keeps them as buttons in `CalendarHeader`'s view switcher instead.
  */
 export default function MobileTabBar({
   active,

@@ -34,6 +34,7 @@ import ListItemModal, { type ItemDraft } from './components/lists/ListItemModal.
 import ListModal from './components/lists/ListModal.js';
 import ListsView from './components/lists/ListsView.js';
 import MemoriesView from './components/memories/MemoriesView.js';
+import SpacesView from './components/spaces/SpacesView.js';
 import MonthView from './components/calendar/MonthView.js';
 import SurpriseModal from './components/calendar/SurpriseModal.js';
 import TimeGridView from './components/calendar/TimeGridView.js';
@@ -97,11 +98,11 @@ export default function App() {
   const [itemDraft, setItemDraft] = useState<ItemDraft | null>(null);
   const [listDraft, setListDraft] = useState<{ list?: List } | null>(null);
 
-  // Which of the phone's three bottom tabs is showing. Derived from `view`
-  // rather than tracked separately — Lists and Memories are already views,
+  // Which of the phone's bottom tabs is showing. Derived from `view` rather
+  // than tracked separately — Lists, Memories and Spaces are already views,
   // and every other view is "the calendar tab, showing that sub-view".
   const mobileTab: MobileTab =
-    view === 'lists' ? 'lists' : view === 'memories' ? 'memories' : 'calendar';
+    view === 'lists' || view === 'memories' || view === 'spaces' ? view : 'calendar';
 
   // Which dated sub-view to return to when tapping back onto the Calendar tab
   // from Lists or Memories. Defaults to agenda — it's the most useful
@@ -326,6 +327,7 @@ export default function App() {
         a: () => setView('agenda'),
         l: () => setView('lists'),
         y: () => setView('memories'),
+        s: () => setView('spaces'),
       };
 
       // The date controls only mean something on a dated view.
@@ -466,6 +468,12 @@ export default function App() {
             onToggleDone={toggleDone}
             onToggleVote={toggleVote}
             onShowDay={showDay}
+          />
+        ) : view === 'spaces' ? (
+          <SpacesView
+            me={me}
+            onOpenSpace={() => setView(lastCalendarView)}
+            onManageSpace={() => setShowSpace(true)}
           />
         ) : view === 'memories' ? (
           <MemoriesView

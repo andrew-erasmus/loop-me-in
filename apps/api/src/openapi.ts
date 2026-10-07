@@ -18,6 +18,7 @@ import {
   meSchema,
   scheduleItemSchema,
   scheduledItemSchema,
+  spaceCreateSchema,
   spaceRenameSchema,
   suggestedSlotSchema,
 } from './core.js';
@@ -223,6 +224,7 @@ export const bodySchemas = {
   listItemPatch: withExamples(toJsonSchema(listItemPatchSchema), LIST_ITEM_EXAMPLES),
   scheduleItem: withExamples(toJsonSchema(scheduleItemSchema), SCHEDULE_EXAMPLES),
   spaceRename: withExamples(toJsonSchema(spaceRenameSchema), { name: 'Loop Me In' }),
+  spaceCreate: withExamples(toJsonSchema(spaceCreateSchema), { name: 'Book club' }),
 };
 
 /** `:id` path parameter, shared by every single-resource route. */
