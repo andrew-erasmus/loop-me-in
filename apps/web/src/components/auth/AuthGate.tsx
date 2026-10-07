@@ -3,6 +3,7 @@ import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import { ApiError } from '@date-calendar/core';
 import { useJoinSpace, useMe } from '../../hooks/useAuth.js';
 import { baseUrl } from '../../lib/api.js';
+import { hideSplash } from '../../lib/splash.js';
 import Icon from '../ui/Icon.js';
 
 /**
@@ -62,13 +63,13 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     });
   }, [me, joinCode, joinSpace]);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-moss-400">Loading…</p>
-      </div>
-    );
-  }
+  // The launch splash covers the session check, and comes down once it has
+  // an answer — signed in or not.
+  useEffect(() => {
+    if (!isLoading) hideSplash();
+  }, [isLoading]);
+
+  if (isLoading) return null;
 
   const unauthorized = error instanceof ApiError && error.status === 401;
 
