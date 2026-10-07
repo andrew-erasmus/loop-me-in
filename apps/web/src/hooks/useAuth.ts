@@ -26,16 +26,31 @@ export function useMe() {
 }
 
 /**
- * Throw away every cached query on a session change.
+ * Throw away every cached answer on a session change.
  *
  * Signing out or switching space changes which space the answers belong to, so
  * keeping any of it would briefly show one space's events under another's name.
+ *
+ * `resetQueries`, not `clear()`. Clearing deletes the query objects themselves,
+ * and every mounted `useQuery` stays subscribed to its deleted one — still
+ * showing the old space — until something happens to re-render it. Tapping a
+ * space card hid that, because it also changes the view; switching from the
+ * header menu or creating a space changed nothing else, so the old space's
+ * name and events just stayed on screen. Resetting empties the same objects in
+ * place and refetches the ones on screen.
  */
 function useResetOnSessionChange() {
   const queryClient = useQueryClient();
-  return (me?: Me) => {
-    queryClient.clear();
-    if (me) queryClient.setQueryData(queryKeys.me, me);
+  return async (me?: Me) => {
+    if (!me) {
+      // Signed out: `me` refetches into the 401 that shows the sign-in screen.
+      await queryClient.resetQueries();
+      return;
+    }
+    queryClient.setQueryData(queryKeys.me, me);
+    await queryClient.resetQueries({
+      predicate: (query) => query.queryKey[0] !== queryKeys.me[0],
+    });
   };
 }
 
