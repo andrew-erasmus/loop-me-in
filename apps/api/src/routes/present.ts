@@ -40,8 +40,11 @@ export function toSpace(row: SpaceRow): Space {
   return { id: row.id, name: row.name, createdAt: row.createdAt };
 }
 
-export function toSpaceSummary(row: SpaceRow, members: UserRow[]): SpaceSummary {
-  return { ...toSpace(row), members: members.map(toUser) };
+export function toSpaceSummary(
+  row: SpaceRow & { role: SpaceSummary['role'] },
+  members: UserRow[],
+): SpaceSummary {
+  return { ...toSpace(row), members: members.map(toUser), role: row.role };
 }
 
 export function toCategory(row: CategoryRow): Category {

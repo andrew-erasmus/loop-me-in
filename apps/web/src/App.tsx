@@ -772,6 +772,7 @@ export default function App() {
           me={me}
           onClose={() => setShowSettings(false)}
           onManageCategories={() => setShowCategories(true)}
+          onManageSpace={() => setShowSpace(true)}
           onSignOut={() => logout.mutate()}
         />
       )}

@@ -200,13 +200,16 @@ export async function upsertGoogleUser(profile: GoogleProfile): Promise<UserRow>
   return user;
 }
 
-/** Every space a user belongs to, oldest first. */
-export async function spacesForUser(userId: string): Promise<SpaceRow[]> {
+/** Every space a user belongs to, oldest first, with their role in each. */
+export async function spacesForUser(
+  userId: string,
+): Promise<(SpaceRow & { role: 'owner' | 'member' })[]> {
   return db
     .select({
       id: schema.spaces.id,
       name: schema.spaces.name,
       createdAt: schema.spaces.createdAt,
+      role: schema.spaceMembers.role,
     })
     .from(schema.spaces)
     .innerJoin(schema.spaceMembers, eq(schema.spaceMembers.spaceId, schema.spaces.id))
@@ -302,6 +305,53 @@ export async function removeMember(spaceId: string, userId: string): Promise<voi
         ),
       );
   });
+}
+
+/**
+ * Delete a space and everything in it, for everyone.
+ *
+ * Every session looking at it is moved first — to that person's oldest other
+ * space, or to a fresh one if this was their only one. Left alone, the
+ * sessions would cascade away with the space, signing everyone out of every
+ * device, and taking each device's push registration with them.
+ *
+ * Children are deleted explicitly rather than trusted to ON DELETE CASCADE,
+ * so the result doesn't depend on foreign keys being enforced on whichever
+ * connection runs it. Returns where each former member landed, by user id.
+ */
+export async function deleteSpace(spaceId: string): Promise<Map<string, SpaceRow>> {
+  const members = await membersOfSpace(spaceId);
+  const landing = new Map<string, SpaceRow>();
+
+  for (const member of members) {
+    const elsewhere = (await spacesForUser(member.id)).find((space) => space.id !== spaceId);
+    const target =
+      elsewhere ?? (await createSpace(`${member.name.split(' ')[0]}'s calendar`, member.id));
+    landing.set(member.id, target);
+    await db
+      .update(schema.sessions)
+      .set({ spaceId: target.id })
+      .where(and(eq(schema.sessions.spaceId, spaceId), eq(schema.sessions.userId, member.id)));
+  }
+
+  await db.transaction(async (tx) => {
+    const itemIds = tx
+      .select({ id: schema.listItems.id })
+      .from(schema.listItems)
+      .where(eq(schema.listItems.spaceId, spaceId));
+    await tx.delete(schema.itemVotes).where(inArray(schema.itemVotes.itemId, itemIds));
+    await tx.delete(schema.listItems).where(eq(schema.listItems.spaceId, spaceId));
+    await tx.delete(schema.lists).where(eq(schema.lists.spaceId, spaceId));
+    await tx.delete(schema.events).where(eq(schema.events.spaceId, spaceId));
+    await tx.delete(schema.categories).where(eq(schema.categories.spaceId, spaceId));
+    await tx.delete(schema.spaceInvites).where(eq(schema.spaceInvites.spaceId, spaceId));
+    // Anything that arrived after the move above, rather than leave it to cascade.
+    await tx.delete(schema.sessions).where(eq(schema.sessions.spaceId, spaceId));
+    await tx.delete(schema.spaceMembers).where(eq(schema.spaceMembers.spaceId, spaceId));
+    await tx.delete(schema.spaces).where(eq(schema.spaces.id, spaceId));
+  });
+
+  return landing;
 }
 
 /**

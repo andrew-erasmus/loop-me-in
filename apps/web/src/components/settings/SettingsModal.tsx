@@ -4,6 +4,7 @@ import {
   faChevronLeft,
   faChevronRight,
   faTags,
+  faUserGroup,
   type IconDefinition,
 } from '@fortawesome/free-solid-svg-icons';
 import type { Me } from '@date-calendar/core';
@@ -22,11 +23,14 @@ export default function SettingsModal({
   me,
   onClose,
   onManageCategories,
+  onManageSpace,
   onSignOut,
 }: {
   me: Me;
   onClose: () => void;
   onManageCategories: () => void;
+  /** Spaces, members, invites — and deleting a space you created. */
+  onManageSpace: () => void;
   onSignOut: () => void;
 }) {
   const [page, setPage] = useState<Page>('root');
@@ -44,6 +48,14 @@ export default function SettingsModal({
         <div className="space-y-6 px-5 py-4">
           <ul className="divide-y divide-moss-100 rounded-xl border border-moss-200/80">
             <Row icon={faBell} label="Notifications" onPress={() => setPage('notifications')} />
+            <Row
+              icon={faUserGroup}
+              label="Your calendars"
+              onPress={() => {
+                onClose();
+                onManageSpace();
+              }}
+            />
             <Row
               icon={faTags}
               label="Categories"

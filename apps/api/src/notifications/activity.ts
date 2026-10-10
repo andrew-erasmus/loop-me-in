@@ -4,6 +4,7 @@ import {
   firstName,
   formatWhen,
   notifySpace,
+  notifyUsers,
   type Origin,
   type PushMessage,
   type Recipient,
@@ -169,6 +170,21 @@ export function memberJoined(origin: Origin, joiner: UserRow, space: SpaceRow): 
   notifySpace(origin, 'memberJoined', () => ({
     title: `${name} joined ${space.name}`,
     body: 'You’re planning together now.',
+    tag: `space-${space.id}`,
+  }));
+}
+
+/** `memberIds` captured before the space was deleted — it can't be asked afterwards. */
+export function spaceDeleted(
+  origin: Origin,
+  actor: UserRow,
+  space: SpaceRow,
+  memberIds: string[],
+): void {
+  const name = firstName(actor.name);
+  notifyUsers(origin, memberIds, 'spaceDeleted', () => ({
+    title: `${name} deleted ${space.name}`,
+    body: 'Its plans and lists have gone with it.',
     tag: `space-${space.id}`,
   }));
 }

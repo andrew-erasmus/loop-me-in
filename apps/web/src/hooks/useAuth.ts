@@ -93,6 +93,18 @@ export function useRenameSpace() {
   });
 }
 
+/**
+ * Delete a space you own. A session change like switching: you land in
+ * another space (or a fresh one), so everything cached belonged to the old one.
+ */
+export function useDeleteSpace() {
+  const reset = useResetOnSessionChange();
+  return useMutation({
+    mutationFn: (spaceId: string) => api.deleteSpace(spaceId),
+    onSuccess: (me) => reset(me),
+  });
+}
+
 export function useCreateInvite() {
   return useMutation({ mutationFn: () => api.createInvite() });
 }

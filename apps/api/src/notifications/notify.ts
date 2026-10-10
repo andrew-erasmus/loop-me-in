@@ -76,21 +76,42 @@ export function originOf(request: FastifyRequest): Origin {
 export function notifySpace(origin: Origin, kind: NotificationKind, build: BuildMessage): void {
   dispatch(origin.log, async () => {
     const members = await membersOfSpace(origin.spaceId);
-    const others = members
-      .map((member) => member.id)
-      .filter((id) => id !== origin.actorId || config.notifySelf);
-    if (others.length === 0) return;
-
-    const settings = await db
-      .select()
-      .from(schema.notificationSettings)
-      .where(inArray(schema.notificationSettings.userId, others))
-      .all();
-    const stored = new Map(settings.map((row) => [row.userId, row.preferences]));
-    const wanting = others.filter((id) => mergePreferences(stored.get(id))[kind]);
-
-    await sendToUsers(origin.log, wanting, build);
+    await deliver(origin, members.map((member) => member.id), kind, build);
   });
+}
+
+/**
+ * The same, for people named up front — for when the space itself won't
+ * exist by the time the notification goes out, so its members can't be
+ * looked up then.
+ */
+export function notifyUsers(
+  origin: Origin,
+  userIds: string[],
+  kind: NotificationKind,
+  build: BuildMessage,
+): void {
+  dispatch(origin.log, () => deliver(origin, userIds, kind, build));
+}
+
+async function deliver(
+  origin: Origin,
+  userIds: string[],
+  kind: NotificationKind,
+  build: BuildMessage,
+): Promise<void> {
+  const others = userIds.filter((id) => id !== origin.actorId || config.notifySelf);
+  if (others.length === 0) return;
+
+  const settings = await db
+    .select()
+    .from(schema.notificationSettings)
+    .where(inArray(schema.notificationSettings.userId, others))
+    .all();
+  const stored = new Map(settings.map((row) => [row.userId, row.preferences]));
+  const wanting = others.filter((id) => mergePreferences(stored.get(id))[kind]);
+
+  await sendToUsers(origin.log, wanting, build);
 }
 
 const DEAD_TOKEN_CODES = new Set([

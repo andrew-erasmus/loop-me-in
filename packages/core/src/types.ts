@@ -62,9 +62,18 @@ export const spaceSchema = z.object({
   createdAt: z.string(),
 });
 
-/** A space as the Spaces page lists it: the space, and who is in it. */
+/**
+ * `owner` is whoever created the space; only they can delete it. Everyone
+ * else is a `member`. Nothing else differs — renaming, inviting and removing
+ * people are open to anyone in the space.
+ */
+export const SPACE_ROLES = ['owner', 'member'] as const;
+export type SpaceRole = (typeof SPACE_ROLES)[number];
+
+/** A space as the Spaces page lists it: the space, who is in it, and your role there. */
 export const spaceSummarySchema = spaceSchema.extend({
   members: userSchema.array(),
+  role: z.enum(SPACE_ROLES),
 });
 
 /** What `GET /auth/me` returns: who you are, where you are, and who else is here. */
@@ -348,6 +357,7 @@ export const NOTIFICATION_KINDS = [
   'itemKeen',
   'itemScheduled',
   'memberJoined',
+  'spaceDeleted',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

@@ -88,6 +88,11 @@ it signs in with Google and lands in your space rather than getting one of their
 why the invite has to be followed *before* their first sign-in, and why there is never a second
 space to merge afterwards.
 
+Whoever creates a space can delete it, under **Settings → Your calendars → Delete this
+calendar**. That deletes it for everyone in it, along with every event, list and category. Each
+member lands in another space they belong to, or a fresh one if it was their only one, and gets
+a notification saying so.
+
 ## API docs
 
 Swagger UI is served at **<http://localhost:3031/docs>**, with the raw OpenAPI 3.1 document at

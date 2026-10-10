@@ -6,6 +6,7 @@ import { setDevActiveSpace } from '../auth/guard.js';
 import {
   clearSessionCookie,
   createSpace,
+  deleteSpace,
   destroySession,
   isMember,
   membersOfSpace,
@@ -14,7 +15,7 @@ import {
   setSessionSpace,
   spacesForUser,
 } from '../auth/session.js';
-import { memberJoined } from '../notifications/activity.js';
+import { memberJoined, spaceDeleted } from '../notifications/activity.js';
 import { bodySchemas, errorResponse, idParam, ref } from '../openapi.js';
 import { badRequest, forbidden, notFound, parseBody } from './helpers.js';
 import { toSpace, toSpaceSummary, toUser } from './present.js';
@@ -244,6 +245,57 @@ export default async function authRoutes(app: FastifyInstance) {
       if (!space) throw notFound('Space not found');
 
       return describeSession(user, space);
+    },
+  );
+
+  /**
+   * Delete a space, for everyone in it. The one thing in a space that needs a
+   * role: only its owner — whoever created it — can, because it takes
+   * everyone else's plans with it, not just their own.
+   */
+  app.delete<{ Params: { id: string } }>(
+    '/spaces/:id',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Delete a space you own',
+        description:
+          'Deletes the space and everything in it — events, lists, categories, invites — for every member. Anyone looking at it is moved to another space they belong to, or to a fresh one if it was their only one; nobody is signed out. The other members are notified.',
+        params: idParam,
+        response: {
+          200: ref.me,
+          401: errorResponse('Not signed in.'),
+          403: errorResponse('You do not belong to that space, or did not create it.'),
+        },
+      },
+    },
+    async (request) => {
+      const { user, sessionId } = request.auth;
+      const targetId = request.params.id;
+
+      const target = (await spacesForUser(user.id)).find((space) => space.id === targetId);
+      if (!target) throw forbidden('You do not belong to that space');
+      if (target.role !== 'owner') {
+        throw forbidden('Only the person who created this calendar can delete it.');
+      }
+
+      const memberIds = (await membersOfSpace(targetId)).map((member) => member.id);
+      const landing = await deleteSpace(targetId);
+      spaceDeleted(
+        { log: request.log, actorId: user.id, spaceId: targetId },
+        user,
+        target,
+        memberIds,
+      );
+
+      // Deleting the space you're looking at lands you wherever deleteSpace
+      // moved your session; deleting another one leaves you where you are.
+      if (request.auth.space.id !== targetId) {
+        return describeSession(user, request.auth.space);
+      }
+      const next = landing.get(user.id)!;
+      await enterSpace(sessionId, user.id, next.id);
+      return describeSession(user, next);
     },
   );
 

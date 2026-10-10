@@ -159,6 +159,16 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
       );
     },
 
+    /**
+     * Delete a space you own, for everyone in it. Returns the session in
+     * whichever space you land in afterwards.
+     */
+    deleteSpace(spaceId: string): Promise<Me> {
+      return request(`/spaces/${id(spaceId)}`, { method: 'DELETE' }, (data) =>
+        meSchema.parse(data),
+      );
+    },
+
     /** Mint a single-use invite link into the space you are looking at. */
     createInvite(): Promise<Invite> {
       return request('/spaces/invites', { method: 'POST' }, (data) =>

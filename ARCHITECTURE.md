@@ -297,8 +297,14 @@ erDiagram
   `list_items.scheduled_event_id` are `ON DELETE SET NULL`. Delete a category and its events turn
   grey. Delete an event and its list item becomes unscheduled again, not deleted. Delete an
   account and its events stay, with `created_by` null.
-- **Deleting a container does cascade.** Deleting a space removes everything in it, and deleting a
-  list removes its items. That's what `ON DELETE CASCADE` is for.
+- **Deleting a container does cascade.** Deleting a list removes its items. Deleting a space
+  removes everything in it. `deleteSpace` in `auth/session.ts` deletes the children explicitly,
+  in one transaction, rather than relying on the cascade. It moves every session viewing the
+  space to another space first, because otherwise the sessions would cascade away too, signing
+  people out and switching off their push notifications.
+- **Only one thing needs a role.** `space_members.role` is `owner` for whoever created the
+  space, `member` for everyone else. Only the owner can delete the space. Renaming, inviting and
+  removing people are open to everyone in it.
 - **Visibility is per event.** `private` events are only returned to their creator. `surprise`
   events are returned to everyone, but with the title, notes and category stripped for anyone but
   the creator (`routes/present.ts → toEvent`). The same rules hide a surprise's date on the list
@@ -333,6 +339,7 @@ Interactive docs (Swagger UI) at <http://localhost:3031/docs> in development. Ra
 | PUT | `/auth/space` | Switch which space this session is viewing. |
 | POST | `/spaces` | Create a space and switch to it. |
 | PATCH | `/spaces/:id` | Rename a space. |
+| DELETE | `/spaces/:id` | **Owner only.** Delete a space and everything in it, for everyone. Anyone viewing it is moved to another of their spaces (or a fresh one), so nobody is signed out. |
 | POST | `/spaces/invites` | Create a single-use invite link (7 days). |
 | POST | `/spaces/join` | Redeem an invite code. |
 | DELETE | `/spaces/members/:id` | Remove someone. Their private and surprise events go with them; everything shared stays. |
@@ -512,6 +519,7 @@ sequenceDiagram
   | `itemKeen` | a new keen vote. The message changes when you're both keen. |
   | `itemScheduled` | giving an item a date, or moving it |
   | `memberJoined` | redeeming an invite, from the Spaces page or during Google sign-in |
+  | `spaceDeleted` | the owner deleting a space. The members are captured before the delete, since the space can't be asked afterwards. |
 
 - **Privacy follows the calendar.** Builders run once per recipient, with the same rules as
   `toEvent`. A *Just me* event produces nothing. A *Surprise* says "Sam planned a surprise —

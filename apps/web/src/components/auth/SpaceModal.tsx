@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { faCheck, faPen, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faPen, faTrash, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import type { Me } from '@date-calendar/core';
 import {
   useCreateInvite,
+  useDeleteSpace,
   useRemoveMember,
   useRenameSpace,
   useSwitchSpace,
@@ -269,6 +270,10 @@ export default function SpaceModal({
           )}
         </section>
 
+        {me.spaces.find((space) => space.id === me.space.id)?.role === 'owner' && (
+          <DeleteSpaceSection me={me} onDeleted={onClose} />
+        )}
+
         <div className="flex justify-end border-t border-moss-100 pt-4">
           <button
             type="button"
@@ -280,5 +285,68 @@ export default function SpaceModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Deleting the calendar you're looking at. Only its owner sees this: it takes
+ * everyone else's plans with it, which is a bigger thing than removing a
+ * person, so it asks twice and says exactly what goes.
+ */
+function DeleteSpaceSection({ me, onDeleted }: { me: Me; onDeleted: () => void }) {
+  const deleteSpace = useDeleteSpace();
+  const [confirming, setConfirming] = useState(false);
+
+  const others = me.members.filter((member) => member.id !== me.user.id);
+  const isOnlySpace = me.spaces.length === 1;
+
+  return (
+    <section className="border-t border-moss-100 pt-4">
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+        >
+          <Icon icon={faTrash} size="sm" />
+          Delete this calendar
+        </button>
+      ) : (
+        <div className="rounded-xl bg-red-50 px-4 py-3.5">
+          <p className="text-sm font-semibold text-red-800">Delete “{me.space.name}”?</p>
+          <p className="mt-1 text-sm leading-relaxed text-red-700">
+            Every event, list and category in it goes too
+            {others.length > 0 && (
+              <> — for {others.map((m) => m.name.split(' ')[0]).join(' and ')} as well</>
+            )}
+            . This can’t be undone.
+            {isOnlySpace && ' You’ll start again in a new, empty calendar.'}
+          </p>
+          {deleteSpace.isError && (
+            <p role="alert" className="mt-2 text-sm text-red-800">
+              {(deleteSpace.error as Error).message}
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              disabled={deleteSpace.isPending}
+              onClick={() => deleteSpace.mutate(me.space.id, { onSuccess: onDeleted })}
+              className="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleteSpace.isPending ? 'Deleting…' : 'Delete for everyone'}
+            </button>
+            <button
+              type="button"
+              disabled={deleteSpace.isPending}
+              onClick={() => setConfirming(false)}
+              className="rounded-lg px-3.5 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
