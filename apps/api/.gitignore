@@ -1,3 +1,2 @@
-# The root .gitignore handles .env files, including keeping the
-# *.example templates tracked. A bare `.env*` here would override that.
+# The root .gitignore handles .env files.
 .vercel

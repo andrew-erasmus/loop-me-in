@@ -16,14 +16,8 @@ dev-dist/
 # having compiled.
 *.tsbuildinfo
 
-# Secrets: OAuth credentials and the session key.
-# Real .env files never get committed; the *.example templates always do.
-#
-# Nothing after this block may re-ignore `.env*`. A later blanket rule wins over
-# these negations and silently drops the templates from the repo — which is what
-# a stray `.env*` here and in apps/*/.gitignore had already done, while
-# OAUTH-AND-DEPLOYMENT.md went on telling you to open files git was hiding.
+# Secrets: OAuth credentials, the session key, the Firebase key. No .env file
+# is ever committed — OAUTH-AND-DEPLOYMENT.md lists what goes in them, and
+# production's values live in each Vercel project's settings.
 .env
 .env.*
-!.env.example
-!.env.*.example

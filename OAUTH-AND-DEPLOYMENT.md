@@ -184,7 +184,7 @@ certificate.
    > two different calendars, silently. `min_machines_running = 1` and no autoscaling is not a
    > limitation here — it is the correct configuration for this database.
 
-3. **Set the secrets** (these are the keys from `apps/api/.env.production.example`)
+3. **Set the secrets** (the API's variables are listed in the [reference](#environment-variable-reference) at the end)
 
    ```bash
    fly secrets set \
@@ -291,9 +291,9 @@ gets its own `*.vercel.app` URL, and the web app's build points at the API's URL
    vercel link      # "Set up and deploy?" → yes; creates a new project
    ```
 
-   In the Vercel dashboard for that project (Settings → Environment Variables), set everything
-   from `apps/api/.env.production.example`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
-   `SESSION_SECRET` (generate once, see the file), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`,
+   In the Vercel dashboard for that project (Settings → Environment Variables), set the API's
+   variables (see the [reference](#environment-variable-reference)): `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET` (generate once, see the reference), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`,
    `COOKIE_SAMESITE=none`, `WEB_ORIGIN` (the web project's URL from step 6 — circular with step 4,
    so deploy once, note both URLs, then fill in the ones that reference each other and redeploy),
    **and `OAUTH_CALLBACK_URL`** set explicitly to this project's own URL
@@ -363,19 +363,17 @@ app is live.
 
 ---
 
-## Environment file reference
+## Environment variable reference
 
-| File | Committed? | What it's for |
+| Where | Committed? | What it's for |
 |---|---|---|
-| `apps/api/.env` | No | Your actual local settings. Already created. |
-| `apps/api/.env.example` | Yes | The documented template for the API. |
-| `apps/api/.env.production.example` | Yes | Keys to set on your production host. |
-| `apps/api/.env.staging.example` | Yes | Same, for a throwaway environment. |
-| `apps/web/.env.example` | Yes | Web build-time config. Unused in dev. |
-| `apps/web/.env.production.example` | Yes | Only needed for Option B (split origins). |
+| `apps/api/.env` | No | The API's local settings. Read by `npm run dev`. |
+| `apps/web/.env.local` | No | The web app's local build-time settings (the Firebase keys). Read by Vite. |
+| Vercel → each project → Settings → Environment Variables | — | Production. Nothing in the repo is used there. |
 
-Real `.env` files are gitignored; every `*.example` is committed. Nothing secret belongs in a
-`VITE_`-prefixed variable — those are inlined into the JavaScript bundle and readable by anyone.
+No `.env` file is committed; this page is the record of what goes in them. Nothing secret
+belongs in a `VITE_`-prefixed variable — those are inlined into the JavaScript bundle and
+readable by anyone.
 
 ### The API's variables
 
@@ -390,3 +388,25 @@ Real `.env` files are gitignored; every `*.example` is committed. Nothing secret
 | `TURSO_DATABASE_URL` | No | Defaults to the local file `file:./calendar.db`. Set to `libsql://...` for a real Turso database. |
 | `TURSO_AUTH_TOKEN` | Only with a `libsql://` URL | From `turso db tokens create`. |
 | `PORT` | No | Defaults to 3031. Most hosts inject their own; Vercel manages this itself. |
+| `NODE_ENV` | In production | `production`. Vercel sets it for you. |
+| `FIREBASE_SERVICE_ACCOUNT` | For notifications | The Firebase service-account key, as base64 of the JSON file. Secret. See [PUSH-NOTIFICATIONS.md](./PUSH-NOTIFICATIONS.md). |
+| `NOTIFY_SELF` | No | `true` to be notified about your own changes, for testing with `AUTH_DEV_USER`. Ignored in production. |
+
+Generate a `SESSION_SECRET` with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### The web app's variables
+
+Build-time: inlined when `vite build` runs, so changing one on Vercel needs a redeploy.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `VITE_API_BASE_URL` | No | Absolute API URL including `/api`. Unset means the relative `/api`, which Vite's dev proxy and `apps/web/vercel.json`'s rewrite both forward to the API. |
+| `VITE_FIREBASE_API_KEY` | For notifications | From the Firebase web app config. Public. |
+| `VITE_FIREBASE_PROJECT_ID` | For notifications | 〃 |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | For notifications | 〃 |
+| `VITE_FIREBASE_APP_ID` | For notifications | 〃 |
+| `VITE_FIREBASE_VAPID_KEY` | For notifications | Firebase → Cloud Messaging → Web Push certificates. Public. |
