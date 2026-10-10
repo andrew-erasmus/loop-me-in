@@ -1,11 +1,12 @@
 {
-  // Solution file: `tsc --build` at the root checks all three packages.
+  // Solution file: `tsc --build` at the root checks every package, and the web app's service worker.
   // Empty `files` because this config compiles nothing itself — it exists
   // purely to point at the projects that do.
   "files": [],
   "references": [
     { "path": "./packages/core" },
     { "path": "./apps/api" },
-    { "path": "./apps/web" }
+    { "path": "./apps/web" },
+    { "path": "./apps/web/tsconfig.sw.json" }
   ]
 }

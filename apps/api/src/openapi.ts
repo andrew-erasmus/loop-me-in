@@ -16,6 +16,9 @@ import {
   listPatchSchema,
   listSchema,
   meSchema,
+  notificationPreferencesPatchSchema,
+  notificationSettingsSchema,
+  pushDeviceInputSchema,
   scheduleItemSchema,
   scheduledItemSchema,
   spaceCreateSchema,
@@ -58,6 +61,7 @@ export const componentIds = {
   listItem: 'ListItem',
   scheduledItem: 'ScheduledItem',
   suggestedSlot: 'SuggestedSlot',
+  notificationSettings: 'NotificationSettings',
   error: 'Error',
 } as const;
 
@@ -140,6 +144,14 @@ export function registerComponents(app: FastifyInstance): void {
   });
 
   app.addSchema({
+    $id: componentIds.notificationSettings,
+    title: 'NotificationSettings',
+    description:
+      'Which kinds of notification this account wants, and whether the server is able to send any at all.',
+    ...toJsonSchema(notificationSettingsSchema),
+  });
+
+  app.addSchema({
     $id: componentIds.error,
     title: 'Error',
     ...errorSchema,
@@ -155,6 +167,7 @@ export const ref = {
   listItem: { $ref: `${componentIds.listItem}#` },
   scheduledItem: { $ref: `${componentIds.scheduledItem}#` },
   suggestedSlot: { $ref: `${componentIds.suggestedSlot}#` },
+  notificationSettings: { $ref: `${componentIds.notificationSettings}#` },
   error: { $ref: `${componentIds.error}#` },
 } as const;
 
@@ -225,6 +238,12 @@ export const bodySchemas = {
   scheduleItem: withExamples(toJsonSchema(scheduleItemSchema), SCHEDULE_EXAMPLES),
   spaceRename: withExamples(toJsonSchema(spaceRenameSchema), { name: 'Loop Me In' }),
   spaceCreate: withExamples(toJsonSchema(spaceCreateSchema), { name: 'Book club' }),
+  notificationPreferencesPatch: withExamples(toJsonSchema(notificationPreferencesPatchSchema), {
+    eventChanged: false,
+  }),
+  pushDeviceInput: withExamples(toJsonSchema(pushDeviceInputSchema), {
+    timeZone: 'Africa/Johannesburg',
+  }),
 };
 
 /** `:id` path parameter, shared by every single-resource route. */
@@ -312,6 +331,7 @@ export const openapiDocument = {
     { name: 'Events', description: 'Calendar entries' },
     { name: 'Categories', description: 'Colour-coded labels for events' },
     { name: 'Lists', description: 'Things to watch, visit and do — and their dates' },
+    { name: 'Notifications', description: 'Push notification preferences and devices' },
     { name: 'System', description: 'Health and diagnostics' },
   ],
 };

@@ -10,6 +10,7 @@ import {
   faChevronDown,
   faChevronLeft,
   faChevronRight,
+  faGear,
 } from '@fortawesome/free-solid-svg-icons';
 import SpaceSwitcher from '../layout/SpaceSwitcher.js';
 import Avatar from '../ui/Avatar.js';
@@ -49,6 +50,7 @@ interface CalendarHeaderProps {
   onManageCategories: () => void;
   /** Opens the spaces / people / invite dialog. */
   onManageSpace: () => void;
+  onOpenSettings: () => void;
   onSignOut: () => void;
   onRefresh: () => void;
   isFetching: boolean;
@@ -64,6 +66,7 @@ export default function CalendarHeader({
   onNewEvent,
   onManageCategories,
   onManageSpace,
+  onOpenSettings,
   onSignOut,
   onRefresh,
   isFetching,
@@ -177,6 +180,16 @@ export default function CalendarHeader({
           className="rounded-lg p-2 text-moss-400 transition hover:bg-moss-100 hover:text-moss-700 disabled:opacity-50"
         >
           <Icon icon={faArrowsRotate} size="sm" className={isFetching ? 'animate-spin' : ''} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          aria-label="Settings"
+          title="Settings"
+          className="rounded-lg p-2 text-moss-400 transition hover:bg-moss-100 hover:text-moss-700"
+        >
+          <Icon icon={faGear} size="sm" />
         </button>
 
         {/* The avatars are the control: who is in this calendar is the same

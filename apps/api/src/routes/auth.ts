@@ -14,6 +14,7 @@ import {
   setSessionSpace,
   spacesForUser,
 } from '../auth/session.js';
+import { memberJoined } from '../notifications/activity.js';
 import { bodySchemas, errorResponse, idParam, ref } from '../openapi.js';
 import { badRequest, forbidden, notFound, parseBody } from './helpers.js';
 import { toSpace, toSpaceSummary, toUser } from './present.js';
@@ -196,9 +197,13 @@ export default async function authRoutes(app: FastifyInstance) {
       const { code } = parseBody(joinSchema, request.body);
       const { user, sessionId } = request.auth;
 
-      const space = await redeemInvite(code, user.id);
-      if (!space) {
+      const redeemed = await redeemInvite(code, user.id);
+      if (!redeemed) {
         throw badRequest('That invite link is no longer valid. Ask for a new one.');
+      }
+      const { space, joined } = redeemed;
+      if (joined) {
+        memberJoined({ log: request.log, actorId: user.id, spaceId: space.id }, user, space);
       }
 
       await enterSpace(sessionId, user.id, space.id);

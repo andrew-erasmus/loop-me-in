@@ -67,6 +67,17 @@ redirect URI is `http://localhost:5173/api/auth/google/callback` — pointed at 
 API**. Vite proxies `/api` through, so the whole flow stays on one origin and the session cookie
 is unambiguously first-party.
 
+## Notifications
+
+Each of you can get a push notification when the other changes a plan or adds to a list, and
+choose which kinds under **Settings (the gear) → Notifications**. Delivery goes through Firebase
+Cloud Messaging, which takes about fifteen minutes to set up once:
+
+**→ [PUSH-NOTIFICATIONS.md](./PUSH-NOTIFICATIONS.md)**
+
+Without it the app works exactly as before, and the settings page says notifications aren't set
+up yet.
+
 ## Sharing it with someone
 
 Press **Invite** in the header. That mints a single-use link, valid for seven days. Whoever opens

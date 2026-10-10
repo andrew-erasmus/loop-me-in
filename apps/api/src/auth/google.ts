@@ -2,6 +2,7 @@ import oauth2, { type OAuth2Namespace } from '@fastify/oauth2';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { config, googleConfigured } from '../config.js';
+import { memberJoined } from '../notifications/activity.js';
 import { redeemInvite } from './invites.js';
 import {
   createSession,
@@ -154,7 +155,10 @@ export default async function googleAuthRoutes(app: FastifyInstance) {
 
       const invited =
         code?.valid && code.value ? await redeemInvite(code.value, user.id) : null;
-      const space = invited ?? (await ensureSpaceForUser(user));
+      const space = invited?.space ?? (await ensureSpaceForUser(user));
+      if (invited?.joined) {
+        memberJoined({ log: request.log, actorId: user.id, spaceId: space.id }, user, space);
+      }
 
       setSessionCookie(reply, await createSession(user.id, space.id));
       return reply.redirect(config.webOrigin);

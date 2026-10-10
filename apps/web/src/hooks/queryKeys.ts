@@ -20,4 +20,6 @@ export const queryKeys = {
 
   lists: ['lists'] as const,
   items: ['items'] as const,
+
+  notificationSettings: ['notificationSettings'] as const,
 };

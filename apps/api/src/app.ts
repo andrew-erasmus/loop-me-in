@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js';
 import categoryRoutes from './routes/categories.js';
 import eventRoutes from './routes/events.js';
 import listRoutes from './routes/lists.js';
+import notificationRoutes from './routes/notifications.js';
 
 /**
  * Builds and configures the Fastify app, but does not `.listen()`.
@@ -170,6 +171,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(categoryRoutes);
       await api.register(eventRoutes);
       await api.register(listRoutes);
+      await api.register(notificationRoutes);
     },
     { prefix: '/api' },
   );

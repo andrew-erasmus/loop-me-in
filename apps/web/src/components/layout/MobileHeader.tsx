@@ -1,4 +1,4 @@
-import { faArrowsRotate, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faArrowsRotate, faChevronDown, faGear } from '@fortawesome/free-solid-svg-icons';
 import type { Me } from '@date-calendar/core';
 import Avatar from '../ui/Avatar.js';
 import Icon from '../ui/Icon.js';
@@ -7,20 +7,21 @@ import SpaceSwitcher from './SpaceSwitcher.js';
 /**
  * The phone-width header: which calendar you are in, and the people in it.
  *
- * Categories and Sign out live in the space sheet rather than up here: a phone
- * header has room for the calendar's name and the people in it, and not much
- * else. The name is a switcher rather than a label, because for anyone in more
+ * Categories and Sign out live in Settings, behind the gear: a phone header
+ * has room for the calendar's name and the people in it, and not much else. The name is a switcher rather than a label, because for anyone in more
  * than one space it's the fastest question the header can answer: *am I
  * looking at the right calendar?*
  */
 export default function MobileHeader({
   me,
   onManageSpace,
+  onOpenSettings,
   onRefresh,
   isFetching,
 }: {
   me: Me;
   onManageSpace: () => void;
+  onOpenSettings: () => void;
   onRefresh: () => void;
   isFetching: boolean;
 }) {
@@ -44,6 +45,16 @@ export default function MobileHeader({
         className="shrink-0 rounded-lg p-2 text-moss-400 transition hover:bg-moss-100 hover:text-moss-700 disabled:opacity-50"
       >
         <Icon icon={faArrowsRotate} size="sm" className={isFetching ? 'animate-spin' : ''} />
+      </button>
+
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        aria-label="Settings"
+        title="Settings"
+        className="shrink-0 rounded-lg p-2 text-moss-400 transition hover:bg-moss-100 hover:text-moss-700"
+      >
+        <Icon icon={faGear} size="sm" />
       </button>
 
       <button

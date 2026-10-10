@@ -6,6 +6,7 @@ import {
   listItemSchema,
   listSchema,
   meSchema,
+  notificationSettingsSchema,
   scheduledItemSchema,
   suggestedSlotSchema,
   type CalendarEvent,
@@ -22,6 +23,9 @@ import {
   type ListItemPatch,
   type ListPatch,
   type Me,
+  type NotificationPreferencesPatch,
+  type NotificationSettings,
+  type PushDeviceInput,
   type ScheduleItemInput,
   type ScheduledItem,
   type SuggestedSlot,
@@ -325,6 +329,49 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
       const suffix = query.size > 0 ? `?${query}` : '';
       return request(`/items/${id(itemId)}/suggested-slots${suffix}`, { method: 'GET' }, (data) =>
         suggestedSlotSchema.array().parse(data),
+      );
+    },
+
+    /* ------------------------------------------------------- notifications */
+
+    /** Which notifications this account wants, and whether the server can send any. */
+    notificationSettings(): Promise<NotificationSettings> {
+      return request('/notifications/settings', { method: 'GET' }, (data) =>
+        notificationSettingsSchema.parse(data),
+      );
+    },
+
+    updateNotificationPreferences(
+      patch: NotificationPreferencesPatch,
+    ): Promise<NotificationSettings> {
+      return request(
+        '/notifications/settings',
+        { method: 'PATCH', body: JSON.stringify(patch) },
+        (data) => notificationSettingsSchema.parse(data),
+      );
+    },
+
+    /** Tell the server where to reach this browser. Safe to repeat. */
+    registerPushDevice(input: PushDeviceInput): Promise<void> {
+      return request(
+        '/notifications/devices',
+        { method: 'POST', body: JSON.stringify(input) },
+        () => undefined,
+      );
+    },
+
+    unregisterPushDevice(token: string): Promise<void> {
+      return request(
+        `/notifications/devices/${id(token)}`,
+        { method: 'DELETE' },
+        () => undefined,
+      );
+    },
+
+    /** Push a test notification to every device you have turned on. */
+    sendTestNotification(): Promise<{ sent: number }> {
+      return request('/notifications/test', { method: 'POST' }, (data) =>
+        z.object({ sent: z.number() }).parse(data),
       );
     },
   };

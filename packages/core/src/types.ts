@@ -332,6 +332,82 @@ export const suggestedSlotSchema = z.object({
 export type SuggestedSlot = z.infer<typeof suggestedSlotSchema>;
 
 /* -------------------------------------------------------------------------- */
+/* Notifications                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Everything the other people in your space can do that is worth a push
+ * notification. Nothing you do yourself ever notifies you, and someone else's
+ * `private` event never notifies anyone — for you it does not exist.
+ */
+export const NOTIFICATION_KINDS = [
+  'eventAdded',
+  'eventChanged',
+  'eventRemoved',
+  'itemAdded',
+  'itemKeen',
+  'itemScheduled',
+  'memberJoined',
+] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
+/**
+ * Which kinds this account wants, one switch each. Per account rather than per
+ * device: turning "changes a plan" off on your phone should not leave your
+ * laptop still buzzing about it.
+ */
+export const notificationPreferencesSchema = z.object(
+  Object.fromEntries(NOTIFICATION_KINDS.map((kind) => [kind, z.boolean()])) as Record<
+    NotificationKind,
+    z.ZodBoolean
+  >,
+);
+export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
+
+/** Everything on until someone says otherwise — two people, not a firehose. */
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = Object.fromEntries(
+  NOTIFICATION_KINDS.map((kind) => [kind, true]),
+) as NotificationPreferences;
+
+export const notificationPreferencesPatchSchema = notificationPreferencesSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, 'No fields to update');
+export type NotificationPreferencesPatch = z.infer<typeof notificationPreferencesPatchSchema>;
+
+/** What `GET /notifications/settings` returns. */
+export const notificationSettingsSchema = z.object({
+  preferences: notificationPreferencesSchema,
+  /**
+   * Whether the server can send pushes at all. False until Firebase
+   * credentials are set on the API, which the settings screen says plainly
+   * rather than letting someone turn notifications on and wonder.
+   */
+  pushConfigured: z.boolean(),
+});
+export type NotificationSettings = z.infer<typeof notificationSettingsSchema>;
+
+/** Body of `POST /notifications/devices` — this browser's FCM token. */
+export const pushDeviceInputSchema = z.object({
+  token: z.string().trim().min(1).max(4096),
+  /**
+   * IANA zone, e.g. `Africa/Johannesburg`. The server writes "Fri 3 Oct,
+   * 19:00" into the notification itself, so it has to know whose 19:00.
+   */
+  timeZone: z
+    .string()
+    .max(64)
+    .refine((zone) => {
+      try {
+        new Intl.DateTimeFormat('en-GB', { timeZone: zone });
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'Unknown time zone'),
+});
+export type PushDeviceInput = z.infer<typeof pushDeviceInputSchema>;
+
+/* -------------------------------------------------------------------------- */
 /* Palettes                                                                    */
 /* -------------------------------------------------------------------------- */
 

@@ -23,15 +23,9 @@ import Modal from '../ui/Modal.js';
 export default function SpaceModal({
   me,
   onClose,
-  onManageCategories,
-  onSignOut,
 }: {
   me: Me;
   onClose: () => void;
-  /** Desktop reaches these from `CalendarHeader` instead — shown here only
-   * below `md`, where that header doesn't exist. */
-  onManageCategories: () => void;
-  onSignOut: () => void;
 }) {
   const switchSpace = useSwitchSpace();
   const removeMember = useRemoveMember();
@@ -273,28 +267,6 @@ export default function SpaceModal({
               Could not create an invite link. {(createInvite.error as Error).message}
             </p>
           )}
-        </section>
-
-        {/* Desktop reaches these through `CalendarHeader`; below `md` there is
-            no other place they live. */}
-        <section className="space-y-1 border-t border-moss-100 pt-4 md:hidden">
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onManageCategories();
-            }}
-            className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-moss-700 transition hover:bg-moss-50"
-          >
-            Manage categories
-          </button>
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-moss-400 transition hover:bg-moss-50 hover:text-moss-900"
-          >
-            Sign out
-          </button>
         </section>
 
         <div className="flex justify-end border-t border-moss-100 pt-4">

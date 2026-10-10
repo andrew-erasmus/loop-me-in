@@ -30,6 +30,7 @@ import CategoryManager from './components/calendar/CategoryManager.js';
 import EventModal, { type EventDraft } from './components/calendar/EventModal.js';
 import FilterSheet from './components/calendar/FilterSheet.js';
 import SpaceModal from './components/auth/SpaceModal.js';
+import SettingsModal from './components/settings/SettingsModal.js';
 import ListItemModal, { type ItemDraft } from './components/lists/ListItemModal.js';
 import ListModal from './components/lists/ListModal.js';
 import ListsView from './components/lists/ListsView.js';
@@ -71,6 +72,7 @@ import {
 } from './hooks/useLists.js';
 import { buildDecorations } from './lib/decorations.js';
 import { roundToNextSlot } from './lib/datetime.js';
+import { refreshPush } from './lib/push.js';
 
 export default function App() {
   // Tapping a day cell means two different things by width: desktop opens a
@@ -93,6 +95,7 @@ export default function App() {
   const [surprise, setSurprise] = useState<CalendarEvent | null>(null);
   const [showCategories, setShowCategories] = useState(false);
   const [showSpace, setShowSpace] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [itemDraft, setItemDraft] = useState<ItemDraft | null>(null);
@@ -162,6 +165,25 @@ export default function App() {
   const refreshAll = useCallback(() => {
     void queryClient.invalidateQueries();
   }, [queryClient]);
+
+  // A push means someone else just changed something. The service worker
+  // tells any open copy of the app, so what the notification says is already
+  // on screen by the time anyone looks.
+  useEffect(() => {
+    const worker = navigator.serviceWorker;
+    if (!worker) return;
+    const onMessage = (message: MessageEvent) => {
+      if ((message.data as { type?: string } | null)?.type === 'push') refreshAll();
+    };
+    worker.addEventListener('message', onMessage);
+    return () => worker.removeEventListener('message', onMessage);
+  }, [refreshAll]);
+
+  // Keep this browser's push registration current — see `refreshPush`.
+  const signedInUserId = me?.user.id;
+  useEffect(() => {
+    if (signedInUserId) void refreshPush(signedInUserId).catch(() => {});
+  }, [signedInUserId]);
 
   const categoriesById = useMemo(() => categoryMap(categories), [categories]);
   const members = useMemo(() => membersById(me), [me]);
@@ -305,6 +327,7 @@ export default function App() {
         itemDraft ||
         listDraft ||
         showSpace ||
+        showSettings ||
         surprise
       )
         return;
@@ -356,6 +379,7 @@ export default function App() {
     itemDraft,
     listDraft,
     showSpace,
+    showSettings,
     surprise,
     view,
     openNewEventAt,
@@ -408,6 +432,7 @@ export default function App() {
       <MobileHeader
         me={me}
         onManageSpace={() => setShowSpace(true)}
+        onOpenSettings={() => setShowSettings(true)}
         onRefresh={refreshAll}
         isFetching={isFetching}
       />
@@ -422,6 +447,7 @@ export default function App() {
         onNewEvent={() => openNewEventAt(roundToNextSlot(new Date()))}
         onManageCategories={() => setShowCategories(true)}
         onManageSpace={() => setShowSpace(true)}
+        onOpenSettings={() => setShowSettings(true)}
         onSignOut={() => logout.mutate()}
         onRefresh={refreshAll}
         isFetching={isFetching}
@@ -675,9 +701,13 @@ export default function App() {
       )}
 
       {showSpace && (
-        <SpaceModal
+        <SpaceModal me={me} onClose={() => setShowSpace(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsModal
           me={me}
-          onClose={() => setShowSpace(false)}
+          onClose={() => setShowSettings(false)}
           onManageCategories={() => setShowCategories(true)}
           onSignOut={() => logout.mutate()}
         />

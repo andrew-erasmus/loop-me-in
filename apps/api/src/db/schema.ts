@@ -256,6 +256,51 @@ export const itemVotes = sqliteTable(
   (table) => [primaryKey({ columns: [table.itemId, table.userId] })],
 );
 
+/* -------------------------------------------------------------------------- */
+/* Notifications                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One row per browser that has said yes to notifications: its Firebase Cloud
+ * Messaging token, and whose it is.
+ *
+ * Tied to the session that registered it, with ON DELETE CASCADE, so signing
+ * out of a phone stops that phone buzzing — without the client having to
+ * remember to unregister first, which it can't if the session expired on its
+ * own. Nullable only for the dev bypass, which has no session row.
+ */
+export const pushDevices = sqliteTable(
+  'push_devices',
+  {
+    token: text('token').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id').references(() => sessions.id, { onDelete: 'cascade' }),
+    /** IANA zone the notification's dates are written in, e.g. `Africa/Johannesburg`. */
+    timeZone: text('time_zone').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('push_devices_user_idx').on(table.userId)],
+);
+
+/**
+ * Which kinds of notification an account wants. Stored as JSON and merged
+ * over the defaults when read, so adding a kind later needs no migration and
+ * nobody's existing choices are disturbed by it.
+ */
+export const notificationSettings = sqliteTable('notification_settings', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  preferences: text('preferences', { mode: 'json' })
+    .$type<Record<string, boolean>>()
+    .notNull(),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type SpaceRow = typeof spaces.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;

@@ -54,6 +54,20 @@ export const config = {
    * exist, and Swagger's "Try it out" stops working. Refused in production.
    */
   devUserEmail: env['AUTH_DEV_USER'] ?? '',
+
+  /**
+   * The Firebase service-account key that lets this API send pushes, as the
+   * downloaded JSON pasted onto one line — or base64 of it, for hosts that
+   * mangle quotes. Unset means notifications are simply off, not an error.
+   */
+  firebaseServiceAccount: env['FIREBASE_SERVICE_ACCOUNT'] ?? '',
+
+  /**
+   * Development only: send activity notifications to the person who caused
+   * them as well. With AUTH_DEV_USER every request is the same person, so
+   * without this there is no one else to notify and nothing to see.
+   */
+  notifySelf: env['NOTIFY_SELF'] === 'true' && env['NODE_ENV'] !== 'production',
 } as const;
 
 /** Whether real Google sign-in is configured. */

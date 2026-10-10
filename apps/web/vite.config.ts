@@ -8,7 +8,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // Our own service worker (src/sw.ts) rather than a generated one: a
+      // generated worker can cache the app shell, but it cannot receive a push
+      // notification or decide what tapping one opens.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
+      // Registered in development too, because push notifications need a
+      // service worker to arrive at — without it, turning them on locally
+      // waits for a worker that never comes. Module workers are Chromium and
+      // Safari only, which is fine for trying it out.
+      devOptions: { enabled: true, type: 'module' },
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Loop Me In',
@@ -35,11 +46,6 @@ export default defineConfig({
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
         ],
-      },
-      workbox: {
-        // Same-origin app shell + API proxy; the API's own responses are
-        // never cached, so a stale event list is never served offline.
-        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],

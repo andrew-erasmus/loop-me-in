@@ -48,10 +48,14 @@ export async function createInvite(spaceId: string, createdBy: string) {
 }
 
 /**
- * Redeem a code, adding the user to its space. Returns the space, or null if
- * the code is unknown, expired or already spent.
+ * Redeem a code, adding the user to its space. Returns the space — with
+ * whether this redemption is what put them there, so the people already in it
+ * can be told — or null if the code is unknown, expired or already spent.
  */
-export async function redeemInvite(rawCode: string, userId: string): Promise<SpaceRow | null> {
+export async function redeemInvite(
+  rawCode: string,
+  userId: string,
+): Promise<{ space: SpaceRow; joined: boolean } | null> {
   const invite = await db
     .select()
     .from(schema.spaceInvites)
@@ -71,7 +75,7 @@ export async function redeemInvite(rawCode: string, userId: string): Promise<Spa
   // rules. The web app re-posts the code after sign-in, so simply reloading the
   // invite URL would otherwise greet someone with "this link is no longer
   // valid" for a space they are already standing in.
-  if (await isMember(space.id, userId)) return space;
+  if (await isMember(space.id, userId)) return { space, joined: false };
 
   if (invite.usedAt) return null;
   if (Date.parse(invite.expiresAt) <= Date.now()) return null;
@@ -90,5 +94,5 @@ export async function redeemInvite(rawCode: string, userId: string): Promise<Spa
   });
 
   await assignColorInSpace(space.id, userId);
-  return space;
+  return { space, joined: true };
 }

@@ -13,6 +13,8 @@ import {
 } from '../core.js';
 import { db, schema } from '../db/index.js';
 import type { ListItemRow, ListRow } from '../db/schema.js';
+import { itemAdded, itemKeen, itemScheduled } from '../notifications/activity.js';
+import { originOf } from '../notifications/notify.js';
 import { bodySchemas, errorResponse, idParam, ref, suggestSlotsQuery } from '../openapi.js';
 import { badRequest, notFound, parseBody } from './helpers.js';
 import { visible } from './events.js';
@@ -352,6 +354,7 @@ export default async function listRoutes(app: FastifyInstance) {
       };
 
       await db.insert(schema.listItems).values(row);
+      itemAdded(originOf(request), request.auth.user, list, row);
       return reply.code(201).send(toListItem(row, [], null));
     },
   );
@@ -444,7 +447,7 @@ export default async function listRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const item = await findItem(request, request.params.id);
-      await db
+      const inserted = await db
         .insert(schema.itemVotes)
         .values({
           itemId: item.id,
@@ -452,7 +455,20 @@ export default async function listRoutes(app: FastifyInstance) {
           createdAt: new Date().toISOString(),
         })
         .onConflictDoNothing();
-      return hydrateOne(item.id, request.auth.user.id);
+      const hydrated = await hydrateOne(item.id, request.auth.user.id);
+
+      // Only a vote that is actually new is news — a repeated PUT is a no-op
+      // here, and should be one on their phone too.
+      if (inserted.rowsAffected > 0) {
+        itemKeen(
+          originOf(request),
+          request.auth.user,
+          await findList(request, item.listId),
+          item,
+          hydrated.votes,
+        );
+      }
+      return hydrated;
     },
   );
 
@@ -588,6 +604,7 @@ export default async function listRoutes(app: FastifyInstance) {
         .from(schema.events)
         .where(eq(schema.events.id, eventId))
         .get())!;
+      itemScheduled(originOf(request), request.auth.user, item, event, Boolean(linked));
 
       return {
         item: await hydrateOne(item.id, request.auth.user.id),

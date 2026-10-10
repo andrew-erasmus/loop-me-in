@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { eventInputSchema, eventPatchSchema } from '../core.js';
 import { db, schema } from '../db/index.js';
 import type { EventRow } from '../db/schema.js';
+import { eventAdded, eventChanged, eventRemoved } from '../notifications/activity.js';
+import { originOf } from '../notifications/notify.js';
 import { bodySchemas, errorResponse, idParam, rangeQuery, ref } from '../openapi.js';
 import { badRequest, forbidden, notFound, parseBody } from './helpers.js';
 import { toEvent } from './present.js';
@@ -179,6 +181,7 @@ export default async function eventRoutes(app: FastifyInstance) {
       };
 
       await db.insert(schema.events).values(row);
+      eventAdded(originOf(request), request.auth.user, row);
       return reply.code(201).send(toEvent(row, request.auth.user.id));
     },
   );
@@ -253,6 +256,7 @@ export default async function eventRoutes(app: FastifyInstance) {
       }
 
       await db.update(schema.events).set(merged).where(eq(schema.events.id, existing.id));
+      eventChanged(originOf(request), request.auth.user, existing, { ...existing, ...merged });
 
       return toEvent({ ...existing, ...merged }, request.auth.user.id);
     },
@@ -279,6 +283,7 @@ export default async function eventRoutes(app: FastifyInstance) {
       const existing = await findVisible(request, request.params.id);
       assertEditable(request, existing);
       await db.delete(schema.events).where(eq(schema.events.id, existing.id));
+      eventRemoved(originOf(request), request.auth.user, existing);
       return reply.code(204).send();
     },
   );
