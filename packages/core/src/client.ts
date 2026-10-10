@@ -169,6 +169,16 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
       );
     },
 
+    /**
+     * Leave a space you didn't create. Returns the session in whichever space
+     * you land in afterwards.
+     */
+    leaveSpace(spaceId: string): Promise<Me> {
+      return request(`/spaces/${id(spaceId)}/leave`, { method: 'POST' }, (data) =>
+        meSchema.parse(data),
+      );
+    },
+
     /** Mint a single-use invite link into the space you are looking at. */
     createInvite(): Promise<Invite> {
       return request('/spaces/invites', { method: 'POST' }, (data) =>

@@ -1,9 +1,16 @@
 import { useRef, useState } from 'react';
-import { faCheck, faPen, faTrash, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCheck,
+  faPen,
+  faRightFromBracket,
+  faTrash,
+  faUserPlus,
+} from '@fortawesome/free-solid-svg-icons';
 import type { Me } from '@date-calendar/core';
 import {
   useCreateInvite,
   useDeleteSpace,
+  useLeaveSpace,
   useRemoveMember,
   useRenameSpace,
   useSwitchSpace,
@@ -40,6 +47,7 @@ export default function SpaceModal({
   const linkRef = useRef<HTMLInputElement>(null);
 
   const invite = createInvite.data;
+  const ownerId = me.spaces.find((space) => space.id === me.space.id)?.ownerId ?? null;
   const busy = switchSpace.isPending || removeMember.isPending;
 
   const saveRename = () => {
@@ -164,6 +172,7 @@ export default function SpaceModal({
           <ul className="space-y-1">
             {me.members.map((member) => {
               const isYou = member.id === me.user.id;
+              const isOwner = member.id === ownerId;
               const confirming = confirmingRemoval === member.id;
 
               return (
@@ -178,13 +187,20 @@ export default function SpaceModal({
                       {isYou && (
                         <span className="ml-1.5 text-xs font-normal text-moss-400">you</span>
                       )}
+                      {isOwner && (
+                        <span className="ml-1.5 text-xs font-normal text-moss-400">
+                          created it
+                        </span>
+                      )}
                     </span>
                     <span className="block truncate text-xs text-moss-400">
                       {member.email}
                     </span>
                   </span>
 
-                  {!isYou && (
+                  {/* The creator can't be removed: a space nobody owns could
+                      never be deleted. They can delete it themselves. */}
+                  {!isYou && !isOwner && (
                     <button
                       type="button"
                       disabled={busy}
@@ -270,8 +286,12 @@ export default function SpaceModal({
           )}
         </section>
 
-        {me.spaces.find((space) => space.id === me.space.id)?.role === 'owner' && (
+        {/* The owner can delete it; anyone else can leave it. Never both: a
+            space whose creator left could never be deleted by anyone. */}
+        {me.spaces.find((space) => space.id === me.space.id)?.role === 'owner' ? (
           <DeleteSpaceSection me={me} onDeleted={onClose} />
+        ) : (
+          <LeaveSpaceSection me={me} onLeft={onClose} />
         )}
 
         <div className="flex justify-end border-t border-moss-100 pt-4">
@@ -339,6 +359,70 @@ function DeleteSpaceSection({ me, onDeleted }: { me: Me; onDeleted: () => void }
             <button
               type="button"
               disabled={deleteSpace.isPending}
+              onClick={() => setConfirming(false)}
+              className="rounded-lg px-3.5 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Leaving a calendar someone else created. Lighter than deleting — it only
+ * takes you out — but still asked twice, because coming back needs a new
+ * invite.
+ */
+function LeaveSpaceSection({ me, onLeft }: { me: Me; onLeft: () => void }) {
+  const leaveSpace = useLeaveSpace();
+  const [confirming, setConfirming] = useState(false);
+
+  const others = me.members.filter((member) => member.id !== me.user.id);
+  const isOnlySpace = me.spaces.length === 1;
+
+  return (
+    <section className="border-t border-moss-100 pt-4">
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+        >
+          <Icon icon={faRightFromBracket} size="sm" />
+          Leave this calendar
+        </button>
+      ) : (
+        <div className="rounded-xl bg-red-50 px-4 py-3.5">
+          <p className="text-sm font-semibold text-red-800">Leave “{me.space.name}”?</p>
+          <p className="mt-1 text-sm leading-relaxed text-red-700">
+            Everything you planned together stays
+            {others.length > 0 && (
+              <> for {others.map((m) => m.name.split(' ')[0]).join(' and ')}</>
+            )}
+            . Anything you marked Just me, and any surprise you were keeping, is deleted. To come
+            back you’ll need a new invite.
+            {isOnlySpace && ' You’ll start again in a new, empty calendar.'}
+          </p>
+          {leaveSpace.isError && (
+            <p role="alert" className="mt-2 text-sm text-red-800">
+              {(leaveSpace.error as Error).message}
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              disabled={leaveSpace.isPending}
+              onClick={() => leaveSpace.mutate(me.space.id, { onSuccess: onLeft })}
+              className="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+            >
+              {leaveSpace.isPending ? 'Leaving…' : 'Leave'}
+            </button>
+            <button
+              type="button"
+              disabled={leaveSpace.isPending}
               onClick={() => setConfirming(false)}
               className="rounded-lg px-3.5 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
             >

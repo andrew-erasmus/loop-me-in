@@ -105,6 +105,15 @@ export function useDeleteSpace() {
   });
 }
 
+/** Leave a space you didn't create — a session change, like deleting one. */
+export function useLeaveSpace() {
+  const reset = useResetOnSessionChange();
+  return useMutation({
+    mutationFn: (spaceId: string) => api.leaveSpace(spaceId),
+    onSuccess: (me) => reset(me),
+  });
+}
+
 export function useCreateInvite() {
   return useMutation({ mutationFn: () => api.createInvite() });
 }

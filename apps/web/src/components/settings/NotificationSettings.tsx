@@ -42,6 +42,7 @@ const GROUPS: {
     heading: 'People',
     kinds: [
       { kind: 'memberJoined', label: 'Joins one of your calendars' },
+      { kind: 'memberLeft', label: 'Leaves one of your calendars' },
       { kind: 'spaceDeleted', label: 'Deletes a calendar you’re in' },
     ],
   },

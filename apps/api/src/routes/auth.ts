@@ -8,6 +8,8 @@ import {
   createSpace,
   deleteSpace,
   destroySession,
+  leaveSpace,
+  ownerOf,
   isMember,
   membersOfSpace,
   removeMember,
@@ -15,7 +17,7 @@ import {
   setSessionSpace,
   spacesForUser,
 } from '../auth/session.js';
-import { memberJoined, spaceDeleted } from '../notifications/activity.js';
+import { memberJoined, memberLeft, spaceDeleted } from '../notifications/activity.js';
 import { bodySchemas, errorResponse, idParam, ref } from '../openapi.js';
 import { badRequest, forbidden, notFound, parseBody } from './helpers.js';
 import { toSpace, toSpaceSummary, toUser } from './present.js';
@@ -41,7 +43,9 @@ const switchSpaceSchema = z.object({ spaceId: z.string().min(1) });
 async function describeSession(user: UserRow, space: SpaceRow) {
   const spaces = await spacesForUser(user.id);
   const summaries = await Promise.all(
-    spaces.map(async (row) => toSpaceSummary(row, await membersOfSpace(row.id))),
+    spaces.map(async (row) =>
+      toSpaceSummary(row, await membersOfSpace(row.id), await ownerOf(row.id)),
+    ),
   );
   const current = summaries.find((summary) => summary.id === space.id);
   return {
@@ -300,6 +304,49 @@ export default async function authRoutes(app: FastifyInstance) {
   );
 
   /**
+   * Leave a space someone else created. Its owner can't leave — they can
+   * delete it instead — because a space nobody created is a space nobody can
+   * ever delete.
+   */
+  app.post<{ Params: { id: string } }>(
+    '/spaces/:id/leave',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Leave a space you did not create',
+        description:
+          'Takes you out of the space. Like being removed, your `private` and `surprise` events in it go and everything shared stays. Unlike being removed, nobody is signed out: your sessions move to another space you belong to, or a fresh one if it was your only one. The others are notified.',
+        params: idParam,
+        response: {
+          200: ref.me,
+          401: errorResponse('Not signed in.'),
+          403: errorResponse('You do not belong to that space, or you created it.'),
+        },
+      },
+    },
+    async (request) => {
+      const { user, sessionId } = request.auth;
+      const targetId = request.params.id;
+
+      const target = (await spacesForUser(user.id)).find((space) => space.id === targetId);
+      if (!target) throw forbidden('You do not belong to that space');
+      if (target.role === 'owner') {
+        throw forbidden('You created this calendar, so you can’t leave it — delete it instead.');
+      }
+
+      const next = await leaveSpace(targetId, user);
+      // Told after leaving, so the leaver isn't among the people told.
+      memberLeft({ log: request.log, actorId: user.id, spaceId: targetId }, user, target);
+
+      if (request.auth.space.id !== targetId) {
+        return describeSession(user, request.auth.space);
+      }
+      await enterSpace(sessionId, user.id, next.id);
+      return describeSession(user, next);
+    },
+  );
+
+  /**
    * Take someone out of the space you are both in.
    *
    * No role check. This app is two people who trust each other — the same
@@ -320,6 +367,7 @@ export default async function authRoutes(app: FastifyInstance) {
         response: {
           200: ref.me,
           400: errorResponse('You cannot remove yourself from a space.'),
+          403: errorResponse('That person created the space.'),
           401: errorResponse('Not signed in.'),
           404: errorResponse('That person is not in this space.'),
         },
@@ -334,6 +382,10 @@ export default async function authRoutes(app: FastifyInstance) {
       }
       if (!(await isMember(space.id, targetId))) {
         throw notFound('That person is not in this space');
+      }
+      // A space with no owner could never be deleted by anyone.
+      if ((await ownerOf(space.id)) === targetId) {
+        throw forbidden('You can’t remove the person who created this calendar.');
       }
 
       await removeMember(space.id, targetId);

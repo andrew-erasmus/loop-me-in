@@ -240,6 +240,16 @@ export async function membersOfSpace(spaceId: string): Promise<UserRow[]> {
     .all();
 }
 
+/** Who created a space, if they are still in it. */
+export async function ownerOf(spaceId: string): Promise<string | null> {
+  const row = await db
+    .select({ userId: schema.spaceMembers.userId })
+    .from(schema.spaceMembers)
+    .where(and(eq(schema.spaceMembers.spaceId, spaceId), eq(schema.spaceMembers.role, 'owner')))
+    .get();
+  return row?.userId ?? null;
+}
+
 export async function isMember(spaceId: string, userId: string): Promise<boolean> {
   const row = await db
     .select({ userId: schema.spaceMembers.userId })
@@ -308,6 +318,38 @@ export async function removeMember(spaceId: string, userId: string): Promise<voi
 }
 
 /**
+ * Point every one of a person's sessions that is looking at `spaceId`
+ * somewhere else — their oldest other space, or a fresh one if they have no
+ * other. Returns where they landed.
+ *
+ * The step before someone stops belonging to a space of their own accord
+ * (leaving it, or its owner deleting it). Deleting the sessions instead would
+ * sign them out of every device, and the cascade would take each device's
+ * push registration too.
+ */
+async function moveSessionsOut(spaceId: string, user: UserRow): Promise<SpaceRow> {
+  const elsewhere = (await spacesForUser(user.id)).find((space) => space.id !== spaceId);
+  const target =
+    elsewhere ?? (await createSpace(`${user.name.split(' ')[0]}'s calendar`, user.id));
+  await db
+    .update(schema.sessions)
+    .set({ spaceId: target.id })
+    .where(and(eq(schema.sessions.spaceId, spaceId), eq(schema.sessions.userId, user.id)));
+  return target;
+}
+
+/**
+ * Leave a space you belong to. The same as being removed from it — what was
+ * only yours goes, everything shared stays — except that your sessions move
+ * to another space rather than being signed out. Returns where you landed.
+ */
+export async function leaveSpace(spaceId: string, user: UserRow): Promise<SpaceRow> {
+  const target = await moveSessionsOut(spaceId, user);
+  await removeMember(spaceId, user.id);
+  return target;
+}
+
+/**
  * Delete a space and everything in it, for everyone.
  *
  * Every session looking at it is moved first — to that person's oldest other
@@ -324,14 +366,7 @@ export async function deleteSpace(spaceId: string): Promise<Map<string, SpaceRow
   const landing = new Map<string, SpaceRow>();
 
   for (const member of members) {
-    const elsewhere = (await spacesForUser(member.id)).find((space) => space.id !== spaceId);
-    const target =
-      elsewhere ?? (await createSpace(`${member.name.split(' ')[0]}'s calendar`, member.id));
-    landing.set(member.id, target);
-    await db
-      .update(schema.sessions)
-      .set({ spaceId: target.id })
-      .where(and(eq(schema.sessions.spaceId, spaceId), eq(schema.sessions.userId, member.id)));
+    landing.set(member.id, await moveSessionsOut(spaceId, member));
   }
 
   await db.transaction(async (tx) => {

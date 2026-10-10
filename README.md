@@ -91,7 +91,8 @@ space to merge afterwards.
 Whoever creates a space can delete it, under **Settings → Your calendars → Delete this
 calendar**. That deletes it for everyone in it, along with every event, list and category. Each
 member lands in another space they belong to, or a fresh one if it was their only one, and gets
-a notification saying so.
+a notification saying so. Anyone else can leave a space instead, from the same place: everything
+shared stays, and only what they had kept to themselves goes with them.
 
 ## API docs
 

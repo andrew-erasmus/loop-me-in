@@ -302,9 +302,11 @@ erDiagram
   in one transaction, rather than relying on the cascade. It moves every session viewing the
   space to another space first, because otherwise the sessions would cascade away too, signing
   people out and switching off their push notifications.
-- **Only one thing needs a role.** `space_members.role` is `owner` for whoever created the
-  space, `member` for everyone else. Only the owner can delete the space. Renaming, inviting and
-  removing people are open to everyone in it.
+- **Roles matter in one place: ending a membership.** `space_members.role` is `owner` for
+  whoever created the space, `member` for everyone else. The owner can delete the space but can't
+  leave it or be removed. Members can leave, or be removed by anyone in the space. Together these
+  rules mean a space always has an owner, so it can always be deleted. Renaming and inviting are
+  open to everyone.
 - **Visibility is per event.** `private` events are only returned to their creator. `surprise`
   events are returned to everyone, but with the title, notes and category stripped for anyone but
   the creator (`routes/present.ts → toEvent`). The same rules hide a surprise's date on the list
@@ -342,7 +344,8 @@ Interactive docs (Swagger UI) at <http://localhost:3031/docs> in development. Ra
 | DELETE | `/spaces/:id` | **Owner only.** Delete a space and everything in it, for everyone. Anyone viewing it is moved to another of their spaces (or a fresh one), so nobody is signed out. |
 | POST | `/spaces/invites` | Create a single-use invite link (7 days). |
 | POST | `/spaces/join` | Redeem an invite code. |
-| DELETE | `/spaces/members/:id` | Remove someone. Their private and surprise events go with them; everything shared stays. |
+| POST | `/spaces/:id/leave` | **Members only** (not the owner). Leave a space. Like being removed, but your sessions move to another space instead of signing out. |
+| DELETE | `/spaces/members/:id` | Remove someone, except the owner. Their private and surprise events go with them; everything shared stays. |
 
 ### Calendar
 
@@ -519,6 +522,7 @@ sequenceDiagram
   | `itemKeen` | a new keen vote. The message changes when you're both keen. |
   | `itemScheduled` | giving an item a date, or moving it |
   | `memberJoined` | redeeming an invite, from the Spaces page or during Google sign-in |
+  | `memberLeft` | a member leaving a space |
   | `spaceDeleted` | the owner deleting a space. The members are captured before the delete, since the space can't be asked afterwards. |
 
 - **Privacy follows the calendar.** Builders run once per recipient, with the same rules as

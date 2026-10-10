@@ -74,6 +74,8 @@ export type SpaceRole = (typeof SPACE_ROLES)[number];
 export const spaceSummarySchema = spaceSchema.extend({
   members: userSchema.array(),
   role: z.enum(SPACE_ROLES),
+  /** Who created it — the one person who can't be removed, only delete it. */
+  ownerId: z.string().nullable(),
 });
 
 /** What `GET /auth/me` returns: who you are, where you are, and who else is here. */
@@ -357,6 +359,7 @@ export const NOTIFICATION_KINDS = [
   'itemKeen',
   'itemScheduled',
   'memberJoined',
+  'memberLeft',
   'spaceDeleted',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

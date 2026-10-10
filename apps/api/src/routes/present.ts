@@ -43,8 +43,9 @@ export function toSpace(row: SpaceRow): Space {
 export function toSpaceSummary(
   row: SpaceRow & { role: SpaceSummary['role'] },
   members: UserRow[],
+  ownerId: string | null,
 ): SpaceSummary {
-  return { ...toSpace(row), members: members.map(toUser), role: row.role };
+  return { ...toSpace(row), members: members.map(toUser), role: row.role, ownerId };
 }
 
 export function toCategory(row: CategoryRow): Category {

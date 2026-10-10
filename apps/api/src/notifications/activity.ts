@@ -188,3 +188,12 @@ export function spaceDeleted(
     tag: `space-${space.id}`,
   }));
 }
+
+export function memberLeft(origin: Origin, leaver: UserRow, space: SpaceRow): void {
+  const name = firstName(leaver.name);
+  notifySpace(origin, 'memberLeft', () => ({
+    title: `${name} left ${space.name}`,
+    body: 'Everything you planned together is still here.',
+    tag: `space-${space.id}`,
+  }));
+}
