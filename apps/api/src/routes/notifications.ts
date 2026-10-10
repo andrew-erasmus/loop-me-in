@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { notificationPreferencesPatchSchema, pushDeviceInputSchema } from '../core.js';
 import { db, schema } from '../db/index.js';
 import { pushConfigured } from '../notifications/firebase.js';
-import { preferencesFor, sendToUsers } from '../notifications/notify.js';
+import { preferencesFor } from '../notifications/notify.js';
 import { bodySchemas, errorResponse, ref } from '../openapi.js';
 import { parseBody } from './helpers.js';
 
@@ -123,33 +123,5 @@ export default async function notificationRoutes(app: FastifyInstance) {
         );
       return reply.code(204).send();
     },
-  );
-
-  app.post(
-    '/notifications/test',
-    {
-      schema: {
-        tags: ['Notifications'],
-        summary: 'Send yourself a test notification',
-        description:
-          'Pushes to every device you have turned notifications on for, regardless of your preferences. `sent` is how many accepted it.',
-        response: {
-          200: {
-            description: 'How many of your devices Firebase accepted the push for.',
-            type: 'object',
-            properties: { sent: { type: 'integer' } },
-            required: ['sent'],
-          },
-          401: errorResponse('Not signed in.'),
-        },
-      },
-    },
-    async (request) => ({
-      sent: await sendToUsers(request.log, [request.auth.user.id], () => ({
-        title: 'Loop Me In',
-        body: 'Notifications are working. You’ll hear from us when something changes.',
-        tag: 'test',
-      })),
-    }),
   );
 }

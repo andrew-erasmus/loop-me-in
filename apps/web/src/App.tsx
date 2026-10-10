@@ -22,6 +22,7 @@ import {
   type EventTimes,
   type List,
   type ListItem,
+  type Me,
 } from '@date-calendar/core';
 import AgendaView from './components/calendar/AgendaView.js';
 import CalendarHeader from './components/calendar/CalendarHeader.js';
@@ -29,7 +30,9 @@ import CategoryFilterBar from './components/calendar/CategoryFilterBar.js';
 import CategoryManager from './components/calendar/CategoryManager.js';
 import EventModal, { type EventDraft } from './components/calendar/EventModal.js';
 import FilterSheet from './components/calendar/FilterSheet.js';
+import MoveConfirmBar from './components/calendar/MoveConfirmBar.js';
 import SpaceModal from './components/auth/SpaceModal.js';
+import NotificationPrompt from './components/settings/NotificationPrompt.js';
 import SettingsModal from './components/settings/SettingsModal.js';
 import ListItemModal, { type ItemDraft } from './components/lists/ListItemModal.js';
 import ListModal from './components/lists/ListModal.js';
@@ -96,6 +99,17 @@ export default function App() {
   const [showCategories, setShowCategories] = useState(false);
   const [showSpace, setShowSpace] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [notificationPromptOpen, setNotificationPromptOpen] = useState(false);
+  /**
+   * A drag that has been dropped but not yet saved. Drawn at its new time
+   * while `MoveConfirmBar` asks; `confirmed` once saving, kept until the save
+   * settles so the event doesn't flick back for a frame in between.
+   */
+  const [pendingMove, setPendingMove] = useState<{
+    eventId: string;
+    times: EventTimes;
+    confirmed: boolean;
+  } | null>(null);
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [itemDraft, setItemDraft] = useState<ItemDraft | null>(null);
@@ -266,19 +280,49 @@ export default function App() {
   );
 
   /**
-   * Commit a drag. The mutation already applies an optimistic update across
-   * every cached range and rolls back on failure, so the event stays where it
-   * was dropped while the PATCH is in flight and snaps back if it fails.
+   * A drop proposes a move rather than making it. Every save notifies the
+   * other person, so nudging an event into place over a few drags used to send
+   * a notification per drag; now nothing is saved until the move is
+   * confirmed, and cancelling snaps the event back.
    */
   const handleMoveEvent = useCallback(
     (eventId: string, times: EventTimes) => {
       // The views already withhold the drag handle here, and the server returns
-      // a 403 regardless. This is the belt to those braces: without it an
-      // optimistic update would visibly move the event and then snap it back.
+      // a 403 regardless. This is the belt to those braces.
       if (decorations.get(eventId)?.canEdit === false) return;
-      updateEvent.mutate({ id: eventId, patch: times });
+      setPendingMove({ eventId, times, confirmed: false });
     },
-    [updateEvent, decorations],
+    [decorations],
+  );
+
+  const confirmMove = useCallback(() => {
+    if (!pendingMove || pendingMove.confirmed) return;
+    const { eventId, times } = pendingMove;
+    setPendingMove({ ...pendingMove, confirmed: true });
+    // The mutation applies its own optimistic update and rolls back on
+    // failure; the override only bridges the gap until it has.
+    updateEvent.mutate(
+      { id: eventId, patch: times },
+      {
+        onSettled: () =>
+          setPendingMove((current) =>
+            current?.eventId === eventId && current.confirmed ? null : current,
+          ),
+      },
+    );
+  }, [pendingMove, updateEvent]);
+
+  const cancelMove = useCallback(() => setPendingMove(null), []);
+
+  /** The visible events, with a dropped-but-unsaved move drawn where it was dropped. */
+  const displayedEvents = useMemo(
+    () =>
+      pendingMove
+        ? visibleEvents.map((event) =>
+            event.id === pendingMove.eventId ? { ...event, ...pendingMove.times } : event,
+          )
+        : visibleEvents,
+    [visibleEvents, pendingMove],
   );
 
   const showDay = useCallback((day: Date) => {
@@ -328,6 +372,8 @@ export default function App() {
         listDraft ||
         showSpace ||
         showSettings ||
+        notificationPromptOpen ||
+        (pendingMove && !pendingMove.confirmed) ||
         surprise
       )
         return;
@@ -380,6 +426,8 @@ export default function App() {
     listDraft,
     showSpace,
     showSettings,
+    notificationPromptOpen,
+    pendingMove,
     surprise,
     view,
     openNewEventAt,
@@ -423,6 +471,11 @@ export default function App() {
   if (!me) return null;
 
   const sourceItem = draft?.event ? itemsByEventId.get(draft.event.id) : undefined;
+
+  const awaitingMoveConfirmation = pendingMove !== null && !pendingMove.confirmed;
+  const movingEvent = pendingMove
+    ? events.find((event) => event.id === pendingMove.eventId)
+    : undefined;
 
   const navigateAnchor = (direction: 1 | -1) =>
     setAnchorDate((date) => (isDatedView(view) ? navigatePeriod(date, view, direction) : date));
@@ -515,7 +568,7 @@ export default function App() {
           <MonthView
             anchorDate={anchorDate}
             today={now}
-            events={visibleEvents}
+            events={displayedEvents}
             categories={categoriesById}
             decorations={decorations}
             onSelectEvent={openEvent}
@@ -527,7 +580,7 @@ export default function App() {
           <AgendaView
             anchorDate={anchorDate}
             today={now}
-            events={visibleEvents}
+            events={displayedEvents}
             categories={categoriesById}
             decorations={decorations}
             onSelectEvent={openEvent}
@@ -540,7 +593,7 @@ export default function App() {
             key={view}
             days={view === 'week' ? weekDays : view === '3day' ? threeDays : singleDay}
             today={now}
-            events={visibleEvents}
+            events={displayedEvents}
             categories={categoriesById}
             decorations={decorations}
             onSelectEvent={openEvent}
@@ -551,7 +604,7 @@ export default function App() {
         )}
       </main>
 
-      {mobileTab === 'calendar' && (
+      {mobileTab === 'calendar' && !awaitingMoveConfirmation && (
         <NewEventFab onPress={() => openNewEventAt(roundToNextSlot(new Date()))} />
       )}
 
@@ -700,9 +753,19 @@ export default function App() {
         <CategoryManager categories={categories} onClose={() => setShowCategories(false)} />
       )}
 
-      {showSpace && (
-        <SpaceModal me={me} onClose={() => setShowSpace(false)} />
+      {showSpace && <SpaceModal me={me} onClose={() => setShowSpace(false)} />}
+
+      {awaitingMoveConfirmation && movingEvent && (
+        <MoveConfirmBar
+          event={movingEvent}
+          times={pendingMove.times}
+          notifies={moveNotifies(movingEvent, me)}
+          onConfirm={confirmMove}
+          onCancel={cancelMove}
+        />
       )}
+
+      <NotificationPrompt me={me} onVisibleChange={setNotificationPromptOpen} />
 
       {showSettings && (
         <SettingsModal
@@ -714,6 +777,18 @@ export default function App() {
       )}
     </div>
   );
+}
+
+/**
+ * Who a move will notify, for the confirmation's small print: nobody for a
+ * "Just me" event or a space of one; otherwise the other person by first name.
+ */
+function moveNotifies(event: CalendarEvent, me: Me): string | null {
+  if (event.visibility === 'private') return null;
+  const others = me.members.filter((member) => member.id !== me.user.id);
+  if (others.length === 0) return null;
+  if (others.length === 1) return others[0]!.name.trim().split(/\s+/)[0] ?? others[0]!.name;
+  return 'Everyone else here';
 }
 
 function LoadingState() {

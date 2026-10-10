@@ -1,14 +1,14 @@
-import { faBell, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCheck } from '@fortawesome/free-solid-svg-icons';
 import type { Me, NotificationKind } from '@date-calendar/core';
 import {
   useNotificationSettings,
   usePushDevice,
-  useSendTestNotification,
   useUpdateNotificationPreferences,
   type DeviceState,
 } from '../../hooks/useNotifications.js';
 import Icon from '../ui/Icon.js';
 import Switch from '../ui/Switch.js';
+import EnableNotificationsButton from './EnableNotificationsButton.js';
 
 const GROUPS: {
   heading: string;
@@ -147,7 +147,6 @@ const DEVICE_MESSAGES: Partial<Record<DeviceState, string>> = {
 };
 
 function DeviceCard({ device }: { device: ReturnType<typeof usePushDevice> }) {
-  const test = useSendTestNotification();
   const message = DEVICE_MESSAGES[device.state];
 
   return (
@@ -160,51 +159,25 @@ function DeviceCard({ device }: { device: ReturnType<typeof usePushDevice> }) {
             <Icon icon={faCheck} size="sm" />
             On for this device
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={test.isPending}
-              onClick={() => test.mutate()}
-              className="rounded-lg border border-moss-200 px-3 py-2 text-sm font-semibold text-moss-800 transition hover:border-moss-300 hover:bg-moss-50 disabled:opacity-50"
-            >
-              {test.isPending ? 'Sending…' : 'Send a test'}
-            </button>
-            <button
-              type="button"
-              disabled={device.busy}
-              onClick={device.disable}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-moss-500 transition hover:bg-moss-100 hover:text-moss-900 disabled:opacity-50"
-            >
-              Turn off on this device
-            </button>
-          </div>
-          {test.data && (
-            <p className="mt-2 text-xs text-moss-500">
-              {test.data.sent > 0
-                ? `Sent to ${test.data.sent} ${test.data.sent === 1 ? 'device' : 'devices'}. It should appear in a moment.`
-                : 'No device accepted it. Try turning notifications off and on again here.'}
-            </p>
-          )}
-          {test.isError && (
-            <p role="alert" className="mt-2 text-xs text-red-700">
-              {(test.error as Error).message}
-            </p>
-          )}
+          <button
+            type="button"
+            disabled={device.busy}
+            onClick={device.disable}
+            className="mt-2 -ml-2 rounded-lg px-2 py-1.5 text-sm font-medium text-moss-500 transition hover:bg-moss-100 hover:text-moss-900 disabled:opacity-50"
+          >
+            Turn off on this device
+          </button>
         </>
       ) : (
         <>
           <p className="text-sm leading-relaxed text-moss-600">
             Get a notification when someone else changes a plan or adds to a list.
           </p>
-          <button
-            type="button"
-            disabled={device.busy}
-            onClick={device.enable}
-            className="mt-3 flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-primary-pressed disabled:opacity-50"
-          >
-            <Icon icon={faBell} size="sm" />
-            {device.busy ? 'Turning on…' : 'Turn on notifications'}
-          </button>
+          <EnableNotificationsButton
+            busy={device.busy}
+            onPress={() => void device.enable()}
+            className="mt-3"
+          />
         </>
       )}
 

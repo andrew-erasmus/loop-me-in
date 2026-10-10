@@ -98,8 +98,8 @@ const DEAD_TOKEN_CODES = new Set([
   'messaging/invalid-registration-token',
 ]);
 
-/** Push to specific accounts, ignoring preferences. Resolves to how many devices took it. */
-export async function sendToUsers(
+/** Push to specific accounts. Resolves to how many devices took it. */
+async function sendToUsers(
   log: FastifyBaseLogger,
   userIds: string[],
   build: BuildMessage,

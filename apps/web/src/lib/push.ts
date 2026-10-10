@@ -120,17 +120,18 @@ async function registerToken(userId: string): Promise<void> {
 }
 
 /**
- * Ask for permission and register this browser.
+ * Show the browser's own "allow notifications?" prompt.
  *
- * Must be called straight from a tap: Safari only shows the permission prompt
- * in direct response to one, which is why the prompt comes before anything
- * that awaits — an `await` first would spend the gesture.
+ * Must be called straight from a tap, before anything that awaits: Safari
+ * only shows the prompt in direct response to one, and an `await` first would
+ * spend the gesture. Resolves to whether they said yes.
  */
-export async function enablePush(userId: string): Promise<void> {
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    throw new PermissionDeniedError();
-  }
+export async function askPermission(): Promise<boolean> {
+  return (await Notification.requestPermission()) === 'granted';
+}
+
+/** Register this browser for this account. Needs permission already granted. */
+export async function registerPush(userId: string): Promise<void> {
   await registerToken(userId);
 }
 
@@ -162,11 +163,4 @@ export async function refreshPush(userId: string): Promise<void> {
   }
   if ((await pushSupport()) !== 'supported') return;
   await registerToken(userId);
-}
-
-export class PermissionDeniedError extends Error {
-  constructor() {
-    super('Notifications are blocked for this site.');
-    this.name = 'PermissionDeniedError';
-  }
 }

@@ -367,13 +367,6 @@ export function createCalendarClient(options: CalendarClientOptions = {}) {
         () => undefined,
       );
     },
-
-    /** Push a test notification to every device you have turned on. */
-    sendTestNotification(): Promise<{ sent: number }> {
-      return request('/notifications/test', { method: 'POST' }, (data) =>
-        z.object({ sent: z.number() }).parse(data),
-      );
-    },
   };
 }
 

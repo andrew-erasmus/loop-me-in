@@ -3,10 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NotificationPreferencesPatch, NotificationSettings } from '@date-calendar/core';
 import { api } from '../lib/api.js';
 import {
+  askPermission,
   disablePush,
-  enablePush,
-  PermissionDeniedError,
   pushSupport,
+  registerPush,
   savedToken,
   type PushSupport,
 } from '../lib/push.js';
@@ -48,10 +48,6 @@ export function useUpdateNotificationPreferences() {
   });
 }
 
-export function useSendTestNotification() {
-  return useMutation({ mutationFn: () => api.sendTestNotification() });
-}
-
 /**
  * - `checking`: still finding out what this browser can do.
  * - `blocked`: the browser has been told no. Only its own settings can undo
@@ -78,27 +74,56 @@ export function usePushDevice(userId: string) {
     void recheck();
   }, [recheck]);
 
-  const run = async (action: () => Promise<void>) => {
+  /** Resolves to whether this browser ended up turned on. */
+  const run = async (action: () => Promise<void>): Promise<boolean> => {
     setBusy(true);
     setError(null);
+    let succeeded = false;
     try {
       await action();
+      succeeded = true;
     } catch (caught) {
-      if (!(caught instanceof PermissionDeniedError)) {
-        setError(caught instanceof Error ? caught.message : String(caught));
-      }
+      setError(describeFailure(caught));
     } finally {
       setBusy(false);
       await recheck();
     }
+    return succeeded;
+  };
+
+  /**
+   * Nothing on screen changes until the permission prompt has been answered.
+   * iOS freezes the page's rendering while its system alert is up, so a
+   * button that starts dimming or relabelling as the alert opens is caught
+   * half-drawn underneath it for as long as the alert stays.
+   */
+  const enable = async (): Promise<boolean> => {
+    setError(null);
+    // First, before any await — see `askPermission`.
+    if (!(await askPermission())) {
+      await recheck();
+      return false;
+    }
+    return run(() => registerPush(userId));
   };
 
   return {
     state,
     busy,
     error,
-    // Not wrapped in anything that awaits first — see `enablePush`.
-    enable: () => run(() => enablePush(userId)),
-    disable: () => run(() => disablePush(userId)),
+    enable,
+    disable: () => run(() => disablePush(userId)).then(() => undefined),
   };
+}
+
+/** Firebase's errors are written for developers; say what it means instead. */
+function describeFailure(caught: unknown): string {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  if (/permission/i.test(message)) {
+    return 'This browser didn’t let Loop Me In send notifications. Check its notification settings for this site and try again.';
+  }
+  if (/network|fetch|offline/i.test(message)) {
+    return 'Couldn’t reach the notification service. Check your connection and try again.';
+  }
+  return message;
 }
