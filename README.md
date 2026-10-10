@@ -13,6 +13,9 @@ Built as a monorepo with the calendar logic in a UI-free package: where an event
 drag means and which days a view covers are all decided there, and can be tested without a
 browser to render them in.
 
+**→ [ARCHITECTURE.md](./ARCHITECTURE.md)** explains how it all works: the stack, the database
+schema, the API, the code layout, and how push notifications get from one phone to the other.
+
 ## Quick start
 
 ```bash

@@ -58,7 +58,8 @@ You need two things from Firebase: a **web app config** (public, goes in the web
 2. Check that **Firebase Cloud Messaging API (V1)** says *Enabled*. If it doesn't, click the ⋮
    next to it and enable it in Google Cloud.
 3. Scroll to **Web configuration → Web Push certificates → Generate key pair**.
-4. Copy the long **Key pair** string. That's the public VAPID key.
+4. Copy the long **Key pair** string. That's the public VAPID key. 
+
 
 ### 4. Create the service-account key → `FIREBASE_SERVICE_ACCOUNT`
 
@@ -95,9 +96,11 @@ NOTIFY_SELF=true   # local only — see below
 
 Then `npm run db:push` (it creates the two new tables) and `npm run dev`.
 
-Open <http://localhost:5173> in **Chrome**, then **gear → Notifications → Turn on
-notifications → Allow → Send a test**. The development service worker is a module worker, which
-not every browser accepts, so use Chrome or Edge for local testing.
+Open <http://localhost:5173> in **Chrome**. A "Stay in the loop?" prompt offers to turn
+notifications on for this browser. Say yes (or use **gear → Notifications → Turn on
+notifications**), allow it, then add an event: a notification should appear within a few
+seconds. The development service worker is a module worker, which not every browser accepts, so
+use Chrome or Edge for local testing.
 
 **Why `NOTIFY_SELF`:** with `AUTH_DEV_USER` every request is the same person, and nobody is ever
 notified about their own changes, so locally nothing would arrive. `NOTIFY_SELF=true` notifies
@@ -117,7 +120,8 @@ TURSO_DATABASE_URL=<...> TURSO_AUTH_TOKEN=<...> \
 **Web project:** add the five `VITE_FIREBASE_*` variables. They are inlined at **build** time,
 so **redeploy** the web project after adding them. An existing build won't pick them up.
 
-Then redeploy the API (`vercel --prod` from `apps/api`) so it reads the new variable.
+Then redeploy the API so it reads the new variable. Both projects are connected to GitHub, so a
+push to `main` redeploys both.
 
 ### 7. Turn it on, on each phone
 
@@ -126,10 +130,12 @@ Screen.
 
 1. Open the site in **Safari → Share → Add to Home Screen**.
 2. Open **Loop Me In from the new icon**, not from Safari.
-3. Gear → Notifications → **Turn on notifications** → **Allow**.
-4. **Send a test**.
+3. Say yes to the **"Stay in the loop?"** prompt, or go to gear → Notifications → **Turn on
+   notifications**, then **Allow**.
+4. Have the other person add a plan to check it arrives.
 
-In a Safari tab, the settings page says this instead of offering a button that can't work.
+The prompt appears once per account per device. In a Safari tab, it and the settings page
+explain the Home Screen step instead of offering a button that can't work there.
 
 **Android:** Chrome works in a tab or installed. Gear → Notifications → Turn on → Allow.
 
@@ -143,8 +149,7 @@ In a Safari tab, the settings page says this instead of offering a button that c
 | Page says *"aren't set up in this build"* | `VITE_FIREBASE_*` missing from the build. Locally: `apps/web/.env.local`, then restart Vite. On Vercel: add them and **redeploy** the web project. |
 | Amber *"server can't send"* banner | `FIREBASE_SERVICE_ACCOUNT` isn't set on the API, or the API wasn't redeployed after setting it. |
 | *"service worker isn't running"* | Reload once: the first visit after deploying installs the new worker. Locally, use Chrome. |
-| Test says *"No device accepted it"* | The token is stale. Turn notifications off and on again on that device. The API also drops tokens FCM reports as dead. |
-| Test says sent, nothing appears | OS-level notifications are off for the browser (macOS Focus / System Settings), or on iOS the app was opened from Safari rather than the Home Screen icon. |
+| Settings says on, but nothing arrives | Check the other person's change was a kind you have switched on, and wasn't *Just me*. Then check OS-level notifications for the browser (macOS Focus / System Settings), or on iOS that the app was opened from the Home Screen icon, not Safari. Still nothing: turn notifications off and on again on that device for a fresh token. The API also drops tokens FCM reports as dead. |
 | *"blocked for Loop Me In"* | Permission was denied once, and browsers don't let a site ask twice. Re-allow in site settings (iOS: Settings → Notifications → Loop Me In). |
 | API log: `invalid_grant` / `account not found` | The service-account key was deleted or revoked in Google Cloud. Generate a new one (step 4). |
 
@@ -158,6 +163,6 @@ Firebase)* → **Website restrictions**: add `http://localhost:5173/*` and your 
 ## What isn't in yet
 
 - **Reminders before an event starts.** These need something to wake the API on a schedule (a
-  Vercel Cron job), not a change somebody makes. Everything here is ready for one to call
-  `sendToUsers`.
+  Vercel Cron job), not a change somebody makes. `apps/api/src/notifications/notify.ts`
+  already has the delivery half (`sendToUsers`) such a job would call.
 - **Per-space preferences.** The switches apply to every space you're in.
